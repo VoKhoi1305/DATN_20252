@@ -1,0 +1,21 @@
+{
+  "name": "smtts",
+  "version": "1.0.0",
+  "description": "Subject Management, Tracking & Tracing System",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "web",
+    "shared"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace=backend",
+    "dev:web": "npm run dev --workspace=web",
+    "build:backend": "npm run build --workspace=backend",
+    "build:web": "npm run build --workspace=web",
+    "db:migrate": "cd scripts && bash migrate.sh"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

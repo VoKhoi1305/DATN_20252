@@ -1,0 +1,70 @@
+version: '3.9'
+
+services:
+  # ============================================================
+  # PostgreSQL — Main Database (smtts_main)
+  # ============================================================
+  postgres-main:
+    image: postgres:16-alpine
+    container_name: smtts-postgres-main
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smtts_main
+      POSTGRES_USER: smtts_user
+      POSTGRES_PASSWORD: ${DB_MAIN_PASSWORD:-smtts_secret_2026}
+    ports:
+      - '5434:5432'
+    volumes:
+      - pgdata-main:/var/lib/postgresql/data
+      - ../scripts/migrations/001_smtts_main_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+      - ../scripts/migrations/003_seed_data.sql:/docker-entrypoint-initdb.d/003_seed.sql
+      - ../scripts/migrations/004_seed_dashboard_data.sql:/docker-entrypoint-initdb.d/004_seed_dashboard.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U smtts_user -d smtts_main']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # PostgreSQL — Biometric Database (smtts_biometric)
+  # ============================================================
+  postgres-biometric:
+    image: postgres:16-alpine
+    container_name: smtts-postgres-biometric
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: smtts_biometric
+      POSTGRES_USER: smtts_bio_user
+      POSTGRES_PASSWORD: ${DB_BIO_PASSWORD:-smtts_bio_secret_2026}
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgdata-biometric:/var/lib/postgresql/data
+      - ../scripts/migrations/002_smtts_biometric_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U smtts_bio_user -d smtts_biometric']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # Redis — Cache & Sessions
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: smtts-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata-main:
+  pgdata-biometric:
+  redis-data:
