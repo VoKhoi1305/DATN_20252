@@ -19,7 +19,7 @@ export class AreasController {
   @Get()
   async findAll(@CurrentUser('userId') userId: string) {
     const user = await this.userRepo.findOneBy({ id: userId });
-    if (!user) return { data: [] };
+    if (!user) return [];
 
     const areaIds = await this.areasService.resolveAreaIds(
       user.dataScopeLevel,
@@ -44,12 +44,10 @@ export class AreasController {
         .getMany();
     }
 
-    return {
-      data: areas.map((a) => ({
-        id: a.id,
-        name: a.name,
-        level: a.level,
-      })),
-    };
+    return areas.map((a) => ({
+      id: a.id,
+      name: a.name,
+      level: a.level,
+    }));
   }
 }

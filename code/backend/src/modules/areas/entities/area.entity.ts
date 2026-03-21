@@ -12,7 +12,6 @@ import {
 export enum AreaLevel {
   PROVINCE = 'PROVINCE',
   DISTRICT = 'DISTRICT',
-  WARD = 'WARD',
 }
 
 @Entity('areas')

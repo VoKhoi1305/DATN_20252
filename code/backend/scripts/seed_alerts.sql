@@ -1,0 +1,116 @@
+-- ========================================
+-- ALERTS - Tạo từ các events vi phạm
+-- alert_rule_id tham chiếu đến alert_rules thật
+-- ========================================
+
+-- AL-001: DT-001 overdue (RESOLVED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, resolved_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000001', 'AL-20260301-001', 'OVERDUE', 'TRUNG_BINH', 'RESOLVED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000001', '10000001-0001-0000-0000-000000000004',
+   'c1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-02 10:00:00+07', '2026-03-01 22:50:00+07');
+
+-- AL-002: DT-003 face mismatch lần 1 (RESOLVED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, resolved_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000002', 'AL-20260225-002', 'FACE_MISMATCH_STREAK', 'CAO', 'RESOLVED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000003', '10000001-0003-0000-0000-000000000002',
+   'c1000000-0000-0000-0000-000000000002', 'b1000000-0000-0000-0000-000000000001',
+   '2026-02-26 14:00:00+07', '2026-02-25 08:35:00+07');
+
+-- AL-003: DT-003 face mismatch lần 3 liên tiếp - CAO, ESCALATED -> tạo Case
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, escalated_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000003', 'AL-20260303-003', 'FACE_MISMATCH_STREAK', 'CAO', 'ESCALATED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000003', '10000001-0003-0000-0000-000000000004',
+   'c1000000-0000-0000-0000-000000000002', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-03 10:00:00+07', '2026-03-03 09:50:00+07');
+
+-- AL-004: DT-003 overdue (ACKNOWLEDGED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000004', 'AL-20260306-004', 'OVERDUE', 'TRUNG_BINH', 'ACKNOWLEDGED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000003', '10000001-0003-0000-0000-000000000005',
+   'c1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-06 21:55:00+07');
+
+-- AL-005: DT-003 severe overdue - KHAN_CAP, ESCALATED -> auto case
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, escalated_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000005', 'AL-20260312-005', 'SEVERE_OVERDUE', 'KHAN_CAP', 'ESCALATED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000003', '10000001-0003-0000-0000-000000000007',
+   'c1000000-0000-0000-0000-000000000004', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-12 06:05:00+07', '2026-03-12 06:01:00+07');
+
+-- AL-006: DT-003 NFC fail (OPEN)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000006', 'AL-20260318-006', 'NFC_CCCD_MISMATCH', 'CAO', 'OPEN', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000003', '10000001-0003-0000-0000-000000000009',
+   'c1000000-0000-0000-0000-000000000003', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-18 09:35:00+07');
+
+-- AL-007: DT-004 NFC fail (RESOLVED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, resolved_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000007', 'AL-20260306-007', 'NFC_CCCD_MISMATCH', 'CAO', 'RESOLVED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000004', '10000001-0004-0000-0000-000000000005',
+   'c1000000-0000-0000-0000-000000000003', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-07 09:00:00+07', '2026-03-06 08:20:00+07');
+
+-- AL-008: DT-004 overdue (OPEN)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000008', 'AL-20260315-008', 'OVERDUE', 'TRUNG_BINH', 'OPEN', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000004', '10000001-0004-0000-0000-000000000008',
+   'c1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-15 22:15:00+07');
+
+-- AL-009: DT-005 overdue lần 1 (RESOLVED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, resolved_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000009', 'AL-20260226-009', 'OVERDUE', 'TRUNG_BINH', 'RESOLVED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000005', '10000001-0005-0000-0000-000000000002',
+   'c1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   '2026-02-27 10:00:00+07', '2026-02-26 22:35:00+07');
+
+-- AL-010: DT-005 severe overdue lần 1 - KHAN_CAP, ESCALATED -> auto case
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, escalated_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000010', 'AL-20260301-010', 'SEVERE_OVERDUE', 'KHAN_CAP', 'ESCALATED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000005', '10000001-0005-0000-0000-000000000003',
+   'c1000000-0000-0000-0000-000000000004', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-01 06:05:00+07', '2026-03-01 06:01:00+07');
+
+-- AL-011: DT-005 overdue lần 2 (ACKNOWLEDGED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000011', 'AL-20260307-011', 'OVERDUE', 'TRUNG_BINH', 'ACKNOWLEDGED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000005', '10000001-0005-0000-0000-000000000005',
+   'c1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-07 21:50:00+07');
+
+-- AL-012: DT-005 severe overdue lần 2 - KHAN_CAP, OPEN
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000012', 'AL-20260319-012', 'SEVERE_OVERDUE', 'KHAN_CAP', 'OPEN', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000005', '10000001-0005-0000-0000-000000000009',
+   'c1000000-0000-0000-0000-000000000004', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-19 06:01:00+07');
+
+-- AL-013: DT-006 NFC fail (RESOLVED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, resolved_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000013', 'AL-20260305-013', 'NFC_CCCD_MISMATCH', 'CAO', 'RESOLVED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000006', '10000001-0006-0000-0000-000000000004',
+   'c1000000-0000-0000-0000-000000000003', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-06 10:00:00+07', '2026-03-05 08:35:00+07');
+
+-- AL-014: DT-007 overdue (RESOLVED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, resolved_at, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000014', 'AL-20260228-014', 'OVERDUE', 'TRUNG_BINH', 'RESOLVED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000007', '10000001-0007-0000-0000-000000000002',
+   'c1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-01 09:00:00+07', '2026-02-28 21:35:00+07');
+
+-- AL-015: DT-007 face mismatch (ACKNOWLEDGED)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000015', 'AL-20260309-015', 'FACE_MISMATCH_STREAK', 'CAO', 'ACKNOWLEDGED', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000007', '10000001-0007-0000-0000-000000000005',
+   'c1000000-0000-0000-0000-000000000002', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-09 09:05:00+07');
+
+-- AL-016: DT-007 overdue (OPEN)
+INSERT INTO alerts (id, code, type, level, status, source, subject_id, trigger_event_id, alert_rule_id, scenario_id, created_at) VALUES
+  ('20000001-0000-0000-0000-000000000016', 'AL-20260318-016', 'OVERDUE', 'TRUNG_BINH', 'OPEN', 'DEFAULT',
+   'd1000000-0000-0000-0000-000000000007', '10000001-0007-0000-0000-000000000008',
+   'c1000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000001',
+   '2026-03-18 22:20:00+07');

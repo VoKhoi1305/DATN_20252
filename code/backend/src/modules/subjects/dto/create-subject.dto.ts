@@ -3,11 +3,11 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEnum,
-  IsUUID,
   Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { IsUUIDLoose } from '../../../common/validators/is-uuid.validator';
 import { Type } from 'class-transformer';
 
 export enum CreateGender {
@@ -57,6 +57,14 @@ export class LegalDto {
 
   @IsOptional()
   @IsString()
+  start_date?: string;
+
+  @IsOptional()
+  @IsString()
+  end_date?: string;
+
+  @IsOptional()
+  @IsString()
   reason?: string;
 }
 
@@ -87,7 +95,7 @@ export class CreateSubjectDto {
   @MaxLength(15)
   phone?: string;
 
-  @IsUUID()
+  @IsUUIDLoose()
   area_id!: string;
 
   @IsOptional()

@@ -111,6 +111,162 @@ export class DashboardService {
     };
   }
 
+  // ─── Charts data ──────────────────────────────────────────────────
+
+  async getCharts(userId: string) {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    const scopeAreaIds = await this.areasService.resolveAreaIds(
+      user.dataScopeLevel,
+      user.areaId,
+    );
+    const subjectIds = await this.getSubjectIdsInScope(scopeAreaIds);
+
+    const [
+      eventsByType,
+      alertsBySeverity,
+      subjectsByStatus,
+      eventsPerDay,
+    ] = await Promise.all([
+      this.getEventsByType(subjectIds),
+      this.getAlertsBySeverity(subjectIds),
+      this.getSubjectsByStatus(scopeAreaIds),
+      this.getEventsPerDay(subjectIds),
+    ]);
+
+    return {
+      eventsByType,
+      alertsBySeverity,
+      subjectsByStatus,
+      eventsPerDay,
+    };
+  }
+
+  private async getEventsByType(
+    subjectIds: string[] | null,
+  ): Promise<{ name: string; value: number }[]> {
+    if (subjectIds !== null && subjectIds.length === 0) return [];
+
+    const qb = this.eventRepo
+      .createQueryBuilder('e')
+      .select('e.type', 'type')
+      .addSelect('COUNT(*)::int', 'count')
+      .where("e.created_at >= NOW() - INTERVAL '30 days'");
+
+    if (subjectIds !== null) {
+      qb.andWhere('e.subject_id IN (:...ids)', { ids: subjectIds });
+    }
+
+    qb.groupBy('e.type').orderBy('count', 'DESC');
+
+    const rows: { type: string; count: number }[] = await qb.getRawMany();
+    return rows.map((r) => ({
+      name: EVENT_TYPE_LABELS[r.type] || r.type,
+      value: r.count,
+    }));
+  }
+
+  private async getAlertsBySeverity(
+    subjectIds: string[] | null,
+  ): Promise<{ name: string; value: number; key: string }[]> {
+    if (subjectIds !== null && subjectIds.length === 0) return [];
+
+    const qb = this.alertRepo
+      .createQueryBuilder('a')
+      .select('a.level', 'level')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('a.status = :status', { status: AlertStatus.OPEN });
+
+    if (subjectIds !== null) {
+      qb.andWhere('a.subject_id IN (:...ids)', { ids: subjectIds });
+    }
+
+    qb.groupBy('a.level').orderBy('count', 'DESC');
+
+    const rows: { level: string; count: number }[] = await qb.getRawMany();
+    return rows.map((r) => ({
+      name: SEVERITY_LABELS[r.level] || r.level,
+      value: r.count,
+      key: r.level,
+    }));
+  }
+
+  private async getSubjectsByStatus(
+    scopeAreaIds: string[] | null,
+  ): Promise<{ name: string; value: number; key: string }[]> {
+    const STATUS_LABELS: Record<string, string> = {
+      KHOI_TAO: 'Khởi tạo',
+      ENROLLMENT: 'Đăng ký',
+      DANG_QUAN_LY: 'Đang quản lý',
+      TAI_HOA_NHAP: 'Tái hòa nhập',
+      KET_THUC: 'Kết thúc',
+    };
+
+    const qb = this.subjectRepo
+      .createQueryBuilder('s')
+      .select('s.lifecycle', 'lifecycle')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('s.deleted_at IS NULL');
+
+    if (scopeAreaIds !== null) {
+      qb.andWhere('s.area_id IN (:...areaIds)', { areaIds: scopeAreaIds });
+    }
+
+    qb.groupBy('s.lifecycle').orderBy('count', 'DESC');
+
+    const rows: { lifecycle: string; count: number }[] = await qb.getRawMany();
+    return rows.map((r) => ({
+      name: STATUS_LABELS[r.lifecycle] || r.lifecycle,
+      value: r.count,
+      key: r.lifecycle,
+    }));
+  }
+
+  private async getEventsPerDay(
+    subjectIds: string[] | null,
+  ): Promise<{ date: string; total: number; success: number; failed: number }[]> {
+    const days: string[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d.toISOString().split('T')[0]);
+    }
+
+    if (subjectIds !== null && subjectIds.length === 0) {
+      return days.map((date) => ({ date, total: 0, success: 0, failed: 0 }));
+    }
+
+    const qb = this.eventRepo
+      .createQueryBuilder('e')
+      .select("TO_CHAR(e.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')", 'date')
+      .addSelect('COUNT(*)::int', 'total')
+      .addSelect("COUNT(*) FILTER (WHERE e.result = 'SUCCESS')::int", 'success')
+      .addSelect("COUNT(*) FILTER (WHERE e.result = 'FAILED')::int", 'failed')
+      .where("e.created_at >= NOW() - INTERVAL '7 days'");
+
+    if (subjectIds !== null) {
+      qb.andWhere('e.subject_id IN (:...ids)', { ids: subjectIds });
+    }
+
+    qb.groupBy("TO_CHAR(e.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')");
+
+    const rows: { date: string; total: number; success: number; failed: number }[] =
+      await qb.getRawMany();
+
+    const dayMap = new Map(rows.map((r) => [r.date, r]));
+
+    return days.map((date) => {
+      const data = dayMap.get(date);
+      return {
+        date,
+        total: data?.total ?? 0,
+        success: data?.success ?? 0,
+        failed: data?.failed ?? 0,
+      };
+    });
+  }
+
   // ─── Recent Events ─────────────────────────────────────────────────
 
   async getRecentEvents(userId: string, limit: number) {

@@ -49,6 +49,15 @@ const dashboard = {
   chartTitle: 'Compliance 7 ngày gần nhất',
   chartNoData: 'Chưa có dữ liệu',
 
+  // Additional charts
+  chartEventsByType: 'Sự kiện theo loại (30 ngày)',
+  chartAlertsBySeverity: 'Cảnh báo theo mức độ',
+  chartSubjectsByStatus: 'Đối tượng theo trạng thái',
+  chartEventsPerDay: 'Sự kiện 7 ngày gần nhất',
+  chartSuccess: 'Thành công',
+  chartFailed: 'Thất bại',
+  chartTotal: 'Tổng',
+
   // Actions
   viewAll: 'Xem tất cả',
   retry: 'Thử lại',
@@ -58,6 +67,7 @@ const dashboard = {
   errLoadSummary: 'Không thể tải dữ liệu tổng quan.',
   errLoadEvents: 'Không thể tải sự kiện gần đây.',
   errLoadAlerts: 'Không thể tải cảnh báo.',
+  errLoadCharts: 'Không thể tải biểu đồ.',
 } as const;
 
 export default dashboard;

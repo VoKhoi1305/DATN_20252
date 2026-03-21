@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets, DataSource } from 'typeorm';
 import { createHash } from 'crypto';
+import * as ExcelJS from 'exceljs';
 import { Subject, SubjectLifecycle, Gender } from './entities/subject.entity';
 import { SubjectFamily } from './entities/subject-family.entity';
 import { SubjectLegal } from './entities/subject-legal.entity';
@@ -163,6 +164,8 @@ export class SubjectsService {
             sub
               .where('s.full_name ILIKE :term', { term })
               .orWhere('s.code ILIKE :term', { term })
+              .orWhere('s.cccd_encrypted ILIKE :term', { term })
+              .orWhere('s.phone ILIKE :term', { term })
               .orWhere('s.address ILIKE :term', { term });
           }),
         );
@@ -176,6 +179,8 @@ export class SubjectsService {
             sub
               .where('s.full_name ILIKE :term', { term })
               .orWhere('s.code ILIKE :term', { term })
+              .orWhere('s.cccd_encrypted ILIKE :term', { term })
+              .orWhere('s.phone ILIKE :term', { term })
               .orWhere('s.address ILIKE :term', { term });
           }),
         );
@@ -196,11 +201,13 @@ export class SubjectsService {
           const paramKey = `adv_${idx}`;
           const fieldMap: Record<string, string> = {
             ho_ten: 's.full_name',
+            cccd: 's.cccd_encrypted',
             ma_ho_so: 's.code',
             trang_thai: 's.lifecycle',
             dia_ban: 'area.name',
             ngay_tao: 's.created_at',
             sdt: 's.phone',
+            dia_chi: 's.address',
           };
 
           const dbField = fieldMap[cond.field];
@@ -285,7 +292,7 @@ export class SubjectsService {
   async getActiveScenarios() {
     const scenarios = await this.scenarioRepo.find({
       where: { status: ScenarioStatus.ACTIVE },
-      select: ['id', 'name'],
+      select: ['id', 'code', 'name'],
       order: { name: 'ASC' },
     });
 
@@ -460,8 +467,8 @@ export class SubjectsService {
           decisionNumber: dto.legal.document_number ?? null,
           decisionDate: dto.legal.document_date ? new Date(dto.legal.document_date) : null,
           managementType: dto.legal.management_duration ?? 'STANDARD',
-          startDate: new Date(),
-          endDate: null,
+          startDate: dto.legal.start_date ? new Date(dto.legal.start_date) : new Date(),
+          endDate: dto.legal.end_date ? new Date(dto.legal.end_date) : null,
           issuingAuthority: dto.legal.authority ?? null,
           legalNotes: dto.legal.reason ?? null,
         });
@@ -558,6 +565,8 @@ export class SubjectsService {
           if (dto.legal.document_date !== undefined) legalUpdates.decisionDate = dto.legal.document_date ? new Date(dto.legal.document_date) as any : null;
           if (dto.legal.authority !== undefined) legalUpdates.issuingAuthority = dto.legal.authority ?? null;
           if (dto.legal.management_duration !== undefined) legalUpdates.managementType = dto.legal.management_duration;
+          if (dto.legal.start_date !== undefined) legalUpdates.startDate = dto.legal.start_date ? new Date(dto.legal.start_date) as any : null;
+          if (dto.legal.end_date !== undefined) legalUpdates.endDate = dto.legal.end_date ? new Date(dto.legal.end_date) as any : null;
           if (dto.legal.reason !== undefined) legalUpdates.legalNotes = dto.legal.reason ?? null;
           if (Object.keys(legalUpdates).length > 0) {
             await queryRunner.manager.update(SubjectLegal, legal.id, legalUpdates as any);
@@ -568,8 +577,8 @@ export class SubjectsService {
             decisionNumber: dto.legal.document_number ?? null,
             decisionDate: dto.legal.document_date ? new Date(dto.legal.document_date) : null,
             managementType: dto.legal.management_duration ?? 'STANDARD',
-            startDate: new Date(),
-            endDate: null,
+            startDate: dto.legal.start_date ? new Date(dto.legal.start_date) : new Date(),
+            endDate: dto.legal.end_date ? new Date(dto.legal.end_date) : null,
             issuingAuthority: dto.legal.authority ?? null,
             legalNotes: dto.legal.reason ?? null,
           });
@@ -593,6 +602,97 @@ export class SubjectsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  // =========================================================================
+  // Export to Excel
+  // =========================================================================
+
+  async exportExcel(dto: ListSubjectsDto, userId: string): Promise<Buffer> {
+    // Re-use findAll but with a high limit to get all matching records
+    const exportDto = { ...dto, page: 1, limit: 5000 };
+    const result = await this.findAll(exportDto, userId);
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'SMTTS';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Hồ sơ đối tượng');
+
+    // Header row
+    sheet.columns = [
+      { header: 'STT', key: 'stt', width: 6 },
+      { header: 'Mã hồ sơ', key: 'ma_ho_so', width: 16 },
+      { header: 'Họ tên', key: 'full_name', width: 28 },
+      { header: 'CCCD', key: 'cccd', width: 16 },
+      { header: 'Ngày sinh', key: 'date_of_birth', width: 14 },
+      { header: 'Địa chỉ', key: 'address', width: 36 },
+      { header: 'SĐT', key: 'phone', width: 14 },
+      { header: 'Kịch bản', key: 'scenario_name', width: 22 },
+      { header: 'Trạng thái', key: 'status', width: 16 },
+      { header: 'Ngày tạo', key: 'created_at', width: 14 },
+    ];
+
+    // Style header row
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, size: 11 };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF9B1C1C' },
+    };
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    headerRow.height = 22;
+
+    const STATUS_LABEL: Record<string, string> = {
+      INIT: 'Khởi tạo',
+      ENROLLED: 'Đã đăng ký',
+      ACTIVE: 'Đang quản lý',
+      REINTEGRATE: 'Tái hòa nhập',
+      ENDED: 'Kết thúc',
+    };
+
+    const formatDate = (iso: string | null) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    };
+
+    result.data.forEach((row, i) => {
+      const dataRow = sheet.addRow({
+        stt: i + 1,
+        ma_ho_so: row.ma_ho_so,
+        full_name: row.full_name,
+        cccd: row.cccd,
+        date_of_birth: formatDate(row.date_of_birth),
+        address: row.address ?? '',
+        phone: row.phone ?? '',
+        scenario_name: row.scenario_name ?? '',
+        status: STATUS_LABEL[row.status] ?? row.status,
+        created_at: formatDate(row.created_at),
+      });
+      dataRow.alignment = { vertical: 'middle' };
+      if (i % 2 === 1) {
+        dataRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF9F9F9' },
+        };
+      }
+    });
+
+    // Auto-filter on header row
+    sheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: sheet.columns.length },
+    };
+
+    // Freeze first row
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 
   // =========================================================================
@@ -735,6 +835,126 @@ export class SubjectsService {
     );
 
     return { data: documents };
+  }
+
+  // =========================================================================
+  // SCR-021: Upload Document
+  // =========================================================================
+
+  async uploadDocument(
+    subjectId: string,
+    file: Express.Multer.File,
+    fileType: string,
+    userId: string,
+  ) {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    const subject = await this.subjectRepo.findOneBy({ id: subjectId });
+    if (!subject) throw new NotFoundException('Không tìm thấy hồ sơ.');
+
+    await this.checkAreaScope(user, subject.areaId);
+
+    // Store file to disk
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const uploadDir = path.join(process.cwd(), 'uploads', 'subjects', subjectId);
+    await fs.mkdir(uploadDir, { recursive: true });
+
+    const ext = path.extname(file.originalname);
+    const storedName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    const storedPath = path.join(uploadDir, storedName);
+    await fs.writeFile(storedPath, file.buffer);
+
+    const relativePath = `/uploads/subjects/${subjectId}/${storedName}`;
+
+    // Insert record into files table
+    const result = await this.dataSource.query(
+      `INSERT INTO files (original_name, stored_path, mime_type, size, file_type, entity_type, entity_id, uploaded_by_id)
+       VALUES ($1, $2, $3, $4, $5, 'SUBJECT', $6, $7)
+       RETURNING id, original_name, stored_path, mime_type, size, file_type, created_at`,
+      [
+        file.originalname,
+        relativePath,
+        file.mimetype,
+        file.size,
+        fileType,
+        subjectId,
+        userId,
+      ],
+    );
+
+    return result[0];
+  }
+
+  async deleteDocument(subjectId: string, docId: string, userId: string) {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    const subject = await this.subjectRepo.findOneBy({ id: subjectId });
+    if (!subject) throw new NotFoundException('Không tìm thấy hồ sơ.');
+
+    await this.checkAreaScope(user, subject.areaId);
+
+    const result = await this.dataSource.query(
+      `UPDATE files SET deleted_at = NOW()
+       WHERE id = $1 AND entity_type = 'SUBJECT' AND entity_id = $2 AND deleted_at IS NULL
+       RETURNING id`,
+      [docId, subjectId],
+    );
+
+    if (result[0]?.length === 0) {
+      throw new NotFoundException('Không tìm thấy tài liệu.');
+    }
+
+    return { success: true };
+  }
+
+  // =========================================================================
+  // Scenario Assignment
+  // =========================================================================
+
+  async assignScenario(subjectId: string, scenarioId: string, userId: string) {
+    const subject = await this.subjectRepo.findOneBy({ id: subjectId });
+    if (!subject) throw new NotFoundException('Không tìm thấy hồ sơ.');
+
+    const scenario = await this.scenarioRepo.findOneBy({ id: scenarioId });
+    if (!scenario) throw new NotFoundException('Không tìm thấy kịch bản.');
+
+    if (scenario.status !== 'ACTIVE') {
+      throw new BadRequestException('Kịch bản phải ở trạng thái "Đang hoạt động" để gán.');
+    }
+
+    // Deactivate any existing active assignment
+    await this.assignmentRepo.update(
+      { subjectId, status: 'ACTIVE' as any },
+      { status: 'INACTIVE' as any, unassignedAt: new Date() },
+    );
+
+    // Create new assignment
+    const assignment = this.assignmentRepo.create({
+      subjectId,
+      scenarioId,
+      assignedById: userId,
+      status: 'ACTIVE' as any,
+      assignedAt: new Date(),
+    });
+    await this.assignmentRepo.save(assignment);
+
+    return { success: true, assignment_id: assignment.id };
+  }
+
+  async unassignScenario(subjectId: string, userId: string) {
+    const result = await this.assignmentRepo.update(
+      { subjectId, status: 'ACTIVE' as any },
+      { status: 'INACTIVE' as any, unassignedAt: new Date() },
+    );
+
+    if (result.affected === 0) {
+      throw new NotFoundException('Không tìm thấy gán kịch bản hoạt động.');
+    }
+
+    return { success: true };
   }
 
   // =========================================================================

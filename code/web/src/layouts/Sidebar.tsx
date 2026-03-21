@@ -9,8 +9,9 @@ import {
   Route,
   Map,
   Clapperboard,
-  BarChart3,
   Settings,
+  SlidersHorizontal,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { getUser } from '@/stores/auth.store';
@@ -31,12 +32,13 @@ const navItems: NavItem[] = [
   { label: MSG.navProfiles, icon: <Users size={16} />, path: '/ho-so' },
   { label: MSG.navEvents, icon: <Activity size={16} />, path: '/events' },
   { label: MSG.navAlerts, icon: <AlertTriangle size={16} />, path: '/alerts' },
+  { label: MSG.navAlertRules, icon: <SlidersHorizontal size={16} />, path: '/quy-tac-canh-bao' },
+  { label: MSG.navEscalationRules, icon: <TrendingUp size={16} />, path: '/quy-tac-leo-thang' },
   { label: MSG.navCases, icon: <Briefcase size={16} />, path: '/cases' },
   { label: MSG.navApprovals, icon: <ClipboardCheck size={16} />, path: '/xet-duyet' },
   { label: MSG.navTrace, icon: <Route size={16} />, path: '/truy-vet' },
   { label: MSG.navMap, icon: <Map size={16} />, path: '/ban-do' },
   { label: MSG.navScenarios, icon: <Clapperboard size={16} />, path: '/kich-ban' },
-  { label: MSG.navReports, icon: <BarChart3 size={16} />, path: '/bao-cao' },
   {
     label: MSG.navAdmin,
     icon: <Settings size={16} />,

@@ -10,4 +10,9 @@ export class DashboardController {
   async getSummary(@CurrentUser('userId') userId: string) {
     return this.dashboardService.getSummary(userId);
   }
+
+  @Get('charts')
+  async getCharts(@CurrentUser('userId') userId: string) {
+    return this.dashboardService.getCharts(userId);
+  }
 }

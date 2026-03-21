@@ -55,3 +55,25 @@ export interface DashboardAlert {
   severityLabel: string;
   timestamp: string;
 }
+
+// --- Charts ---
+
+export interface ChartItem {
+  name: string;
+  value: number;
+  key?: string;
+}
+
+export interface EventsPerDayItem {
+  date: string;
+  total: number;
+  success: number;
+  failed: number;
+}
+
+export interface DashboardChartsResponse {
+  eventsByType: ChartItem[];
+  alertsBySeverity: ChartItem[];
+  subjectsByStatus: ChartItem[];
+  eventsPerDay: EventsPerDayItem[];
+}

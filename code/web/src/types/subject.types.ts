@@ -26,6 +26,7 @@ export interface SubjectListResponse {
 
 export interface ScenarioOption {
   id: string;
+  code: string;
   name: string;
 }
 
@@ -172,6 +173,8 @@ export interface CreateSubjectPayload {
     document_date?: string;
     authority?: string;
     management_duration?: string;
+    start_date?: string;
+    end_date?: string;
     reason?: string;
   };
 }
@@ -197,6 +200,8 @@ export interface UpdateSubjectPayload {
     document_date?: string;
     authority?: string;
     management_duration?: string;
+    start_date?: string;
+    end_date?: string;
     reason?: string;
   };
 }

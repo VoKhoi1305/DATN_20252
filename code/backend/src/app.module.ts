@@ -8,6 +8,11 @@ import { UsersModule } from './modules/users/users.module';
 import { SubjectsModule } from './modules/subjects/subjects.module';
 import { ScenariosModule } from './modules/scenarios/scenarios.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { GeofencesModule } from './modules/geofences/geofences.module';
+import { EventsModule } from './modules/events/events.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
+import { CasesModule } from './modules/cases/cases.module';
+import { SeedModule } from './modules/seed/seed.module';
 import { databaseConfigFactory } from './config/database.config';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
@@ -37,6 +42,11 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     SubjectsModule,
     ScenariosModule,
     DashboardModule,
+    GeofencesModule,
+    EventsModule,
+    AlertsModule,
+    CasesModule,
+    SeedModule,
   ],
   providers: [
     {

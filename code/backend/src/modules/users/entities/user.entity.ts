@@ -16,7 +16,6 @@ export enum UserRole {
 }
 
 export enum DataScopeLevel {
-  WARD = 'WARD',
   DISTRICT = 'DISTRICT',
   PROVINCE = 'PROVINCE',
   SYSTEM = 'SYSTEM',

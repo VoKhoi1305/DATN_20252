@@ -2,10 +2,10 @@ import {
   IsString,
   IsOptional,
   IsEnum,
-  IsUUID,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { IsUUIDLoose } from '../../../common/validators/is-uuid.validator';
 import { Type } from 'class-transformer';
 import { CreateGender, FamilyDto, LegalDto } from './create-subject.dto';
 
@@ -33,7 +33,7 @@ export class UpdateSubjectDto {
   phone?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsUUIDLoose()
   area_id?: string;
 
   @IsOptional()

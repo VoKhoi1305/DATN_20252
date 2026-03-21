@@ -6,8 +6,9 @@ import PageHeader from '@/components/navigation/PageHeader';
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/Toast';
+import DatePicker from '@/components/ui/DatePicker';
 
-import { createSubject, fetchAreas, checkCccd } from '@/api/subjects.api';
+import { createSubject, fetchAreas, extractAreas, checkCccd } from '@/api/subjects.api';
 import { getMessages } from '@/locales';
 
 import type { AreaOption, CreateSubjectPayload } from '@/types/subject.types';
@@ -74,6 +75,8 @@ function SubjectCreatePage() {
   const [legalDate, setLegalDate] = useState('');
   const [legalAuthority, setLegalAuthority] = useState('');
   const [legalDuration, setLegalDuration] = useState('');
+  const [legalStartDate, setLegalStartDate] = useState('');
+  const [legalEndDate, setLegalEndDate] = useState('');
   const [legalReason, setLegalReason] = useState('');
 
   // Notes
@@ -90,6 +93,28 @@ function SubjectCreatePage() {
   // --- Data ---
   const [areas, setAreas] = useState<AreaOption[]>([]);
 
+  // --- Area search dropdown state ---
+  const [areaSearch, setAreaSearch] = useState('');
+  const [areaDropdownOpen, setAreaDropdownOpen] = useState(false);
+  const areaRef = useRef<HTMLDivElement>(null);
+
+  const filteredAreas = areaSearch.trim()
+    ? areas.filter((a) => a.name.toLowerCase().includes(areaSearch.toLowerCase()))
+    : areas;
+
+  const selectedAreaName = areas.find((a) => a.id === areaId)?.name ?? '';
+
+  // Close area dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (areaRef.current && !areaRef.current.contains(e.target as Node)) {
+        setAreaDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // --- Refs ---
   const cccdDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -104,7 +129,7 @@ function SubjectCreatePage() {
     fetchAreas()
       .then((res) => {
         if (!cancelled) {
-          setAreas(res.data.data ?? []);
+          setAreas(extractAreas(res));
         }
       })
       .catch(() => {
@@ -143,7 +168,8 @@ function SubjectCreatePage() {
       setCheckingCccd(true);
       try {
         const res = await checkCccd(trimmed);
-        if (res.data.exists) {
+        const result = (res.data as any)?.data ?? res.data;
+        if (result.exists) {
           setErrors((prev) => ({ ...prev, cccd: MSG.cccdExists }));
         }
       } catch {
@@ -242,6 +268,8 @@ function SubjectCreatePage() {
       legalDate ||
       legalAuthority.trim() ||
       legalDuration.trim() ||
+      legalStartDate ||
+      legalEndDate ||
       legalReason.trim();
     if (hasLegalData) {
       payload.legal = {};
@@ -249,6 +277,8 @@ function SubjectCreatePage() {
       if (legalDate) payload.legal.document_date = legalDate;
       if (legalAuthority.trim()) payload.legal.authority = legalAuthority.trim();
       if (legalDuration.trim()) payload.legal.management_duration = legalDuration.trim();
+      if (legalStartDate) payload.legal.start_date = legalStartDate;
+      if (legalEndDate) payload.legal.end_date = legalEndDate;
       if (legalReason.trim()) payload.legal.reason = legalReason.trim();
     }
 
@@ -263,13 +293,22 @@ function SubjectCreatePage() {
     try {
       const payload = buildPayload();
       const res = await createSubject(payload);
-      const data = res.data;
+      const body = res.data as any;
+      const data = body?.data ?? body;
       showToast(MSG.createSuccess, 'success');
       navigate(`/ho-so/${data.id}`, { replace: true });
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
+      const resp = (err as any)?.response;
+      const status = resp?.status;
       if (status === 409) {
         setErrors((prev) => ({ ...prev, cccd: MSG.cccdExists }));
+      } else if (status === 400) {
+        const details = resp?.data?.error?.details;
+        if (Array.isArray(details) && details.length > 0) {
+          showToast(details.join(', '), 'error');
+        } else {
+          showToast(resp?.data?.error?.message || MSG.createError, 'error');
+        }
       } else {
         showToast(MSG.createError, 'error');
       }
@@ -339,14 +378,13 @@ function SubjectCreatePage() {
           {/* Ngay sinh */}
           <div>
             <Label text={MSG.lblDob} required />
-            <input
-              type="date"
+            <DatePicker
               value={dateOfBirth}
-              onChange={(e) => {
-                setDateOfBirth(e.target.value);
+              onChange={(v) => {
+                setDateOfBirth(v);
                 clearError('date_of_birth');
               }}
-              className={`${inputBase} ${errors.date_of_birth ? inputError : ''}`}
+              error={!!errors.date_of_birth}
             />
             <FieldError message={errors.date_of_birth} />
           </div>
@@ -387,30 +425,62 @@ function SubjectCreatePage() {
             <FieldError message={errors.phone} />
           </div>
 
-          {/* Noi DKQL */}
-          <div>
+          {/* Noi DKQL — searchable dropdown */}
+          <div ref={areaRef}>
             {loadingAreas ? (
               <AreasSkeleton />
             ) : (
               <>
                 <Label text={MSG.lblArea} required />
-                <select
-                  value={areaId}
-                  onChange={(e) => {
-                    setAreaId(e.target.value);
-                    clearError('area_id');
-                  }}
-                  className={`${selectBase} ${errors.area_id ? inputError : ''} ${!areaId ? 'text-zinc-400' : ''}`}
-                >
-                  <option value="" disabled>
-                    {MSG.phArea}
-                  </option>
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={areaDropdownOpen ? areaSearch : selectedAreaName}
+                    onChange={(e) => {
+                      setAreaSearch(e.target.value);
+                      if (!areaDropdownOpen) setAreaDropdownOpen(true);
+                    }}
+                    onFocus={() => {
+                      setAreaDropdownOpen(true);
+                      setAreaSearch('');
+                    }}
+                    placeholder={MSG.phArea}
+                    className={`${inputBase} ${errors.area_id ? inputError : ''}`}
+                    autoComplete="off"
+                  />
+                  {areaDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-full max-h-[200px] overflow-y-auto bg-white border border-zinc-200 rounded shadow-lg">
+                      {filteredAreas.length === 0 ? (
+                        <div className="px-3 py-2 text-[13px] text-zinc-400">
+                          Không tìm thấy
+                        </div>
+                      ) : (
+                        filteredAreas.map((area) => (
+                          <button
+                            key={area.id}
+                            type="button"
+                            onClick={() => {
+                              setAreaId(area.id);
+                              setAreaSearch('');
+                              setAreaDropdownOpen(false);
+                              clearError('area_id');
+                            }}
+                            className={`w-full text-left px-3 py-2 text-[13px] hover:bg-zinc-50 transition-colors ${
+                              area.id === areaId
+                                ? 'bg-red-50 text-red-700 font-medium'
+                                : 'text-zinc-900'
+                            }`}
+                          >
+                            {area.name}
+                            <span className="ml-2 text-[11px] text-zinc-400">
+                              {area.level}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
                 <FieldError message={errors.area_id} />
               </>
             )}
@@ -507,11 +577,9 @@ function SubjectCreatePage() {
           {/* Ngay ra QD */}
           <div>
             <Label text={MSG.lblLegalDate} />
-            <input
-              type="date"
+            <DatePicker
               value={legalDate}
-              onChange={(e) => setLegalDate(e.target.value)}
-              className={inputBase}
+              onChange={setLegalDate}
             />
           </div>
 
@@ -527,7 +595,7 @@ function SubjectCreatePage() {
             />
           </div>
 
-          {/* Thoi han quan ly */}
+          {/* Hinh thuc quan ly */}
           <div>
             <Label text={MSG.lblLegalDuration} />
             <input
@@ -536,6 +604,24 @@ function SubjectCreatePage() {
               onChange={(e) => setLegalDuration(e.target.value)}
               placeholder={MSG.phLegalDuration}
               className={inputBase}
+            />
+          </div>
+
+          {/* Ngay bat dau QL */}
+          <div>
+            <Label text={MSG.lblLegalStartDate} />
+            <DatePicker
+              value={legalStartDate}
+              onChange={setLegalStartDate}
+            />
+          </div>
+
+          {/* Ngay ket thuc QL */}
+          <div>
+            <Label text={MSG.lblLegalEndDate} />
+            <DatePicker
+              value={legalEndDate}
+              onChange={setLegalEndDate}
             />
           </div>
 

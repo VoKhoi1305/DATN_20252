@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Download, Search, Users, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Download, Search, Users, RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal, X, PlusCircle } from 'lucide-react';
 
 import PageHeader from '@/components/navigation/PageHeader';
 import Button from '@/components/ui/Button';
@@ -8,8 +8,9 @@ import Badge from '@/components/ui/Badge';
 import Skeleton from '@/components/ui/Skeleton';
 import EmptyState from '@/components/data-display/EmptyState';
 import { useToast } from '@/components/ui/Toast';
+import DatePicker from '@/components/ui/DatePicker';
 
-import { fetchSubjects, fetchScenarioOptions } from '@/api/subjects.api';
+import { fetchSubjects, fetchScenarioOptions, exportSubjects } from '@/api/subjects.api';
 import { getUser } from '@/stores/auth.store';
 import { getMessages } from '@/locales';
 
@@ -59,8 +60,10 @@ function TableSkeleton() {
   );
 }
 
-function formatDate(isoString: string): string {
+function formatDate(isoString: string | null | undefined): string {
+  if (!isoString) return '—';
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '—';
   const dd = String(date.getDate()).padStart(2, '0');
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const yyyy = date.getFullYear();
@@ -97,6 +100,46 @@ function SubjectListPage() {
   const [filterScenarioId, setFilterScenarioId] = useState(searchParams.get('scenario_id') || '');
   const [filterDateFrom, setFilterDateFrom] = useState(searchParams.get('from') || '');
   const [filterDateTo, setFilterDateTo] = useState(searchParams.get('to') || '');
+
+  // --- Advanced search ---
+  interface AdvCondition {
+    field: string;
+    operator: string;
+    value: string;
+  }
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [advConditions, setAdvConditions] = useState<AdvCondition[]>([]);
+
+  const ADV_FIELDS = [
+    { value: 'ho_ten', label: MSG.advFieldName },
+    { value: 'cccd', label: MSG.advFieldCccd },
+    { value: 'ma_ho_so', label: MSG.advFieldCode },
+    { value: 'sdt', label: MSG.advFieldPhone },
+    { value: 'dia_chi', label: MSG.advFieldAddress },
+    { value: 'dia_ban', label: MSG.advFieldArea },
+    { value: 'trang_thai', label: MSG.advFieldStatus },
+    { value: 'ngay_tao', label: MSG.advFieldDate },
+  ];
+
+  const ADV_OPERATORS = [
+    { value: '~', label: MSG.advOpContains },
+    { value: '=', label: MSG.advOpEquals },
+    { value: '!=', label: MSG.advOpNotEquals },
+    { value: '>', label: MSG.advOpAfter },
+    { value: '<', label: MSG.advOpBefore },
+  ];
+
+  const addCondition = () => {
+    setAdvConditions((prev) => [...prev, { field: 'ho_ten', operator: '~', value: '' }]);
+  };
+
+  const removeCondition = (idx: number) => {
+    setAdvConditions((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateCondition = (idx: number, key: keyof AdvCondition, val: string) => {
+    setAdvConditions((prev) => prev.map((c, i) => (i === idx ? { ...c, [key]: val } : c)));
+  };
 
   const [scenarioOptions, setScenarioOptions] = useState<ScenarioOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,6 +209,13 @@ function SubjectListPage() {
     if (filterDateFrom) params.from = filterDateFrom;
     if (filterDateTo) params.to = filterDateTo;
 
+    // Advanced search conditions
+    const validConditions = advConditions.filter((c) => c.value.trim());
+    if (validConditions.length > 0) {
+      params.advanced = 'true';
+      params.conditions = JSON.stringify(validConditions);
+    }
+
     try {
       const res = await fetchSubjects(params);
       const body = res.data.data ?? res.data as unknown as { data: SubjectListItem[]; total: number; page: number; limit: number };
@@ -189,7 +239,7 @@ function SubjectListPage() {
       setRefreshing(false);
       isFirstLoad.current = false;
     }
-  }, [currentPage, sortField, sortOrder, filterStatus, filterScenarioId, filterDateFrom, filterDateTo, showToast]);
+  }, [currentPage, sortField, sortOrder, filterStatus, filterScenarioId, filterDateFrom, filterDateTo, advConditions, showToast]);
 
   // --- Effect: load data on filter/sort/page change ---
   useEffect(() => {
@@ -245,19 +295,32 @@ function SubjectListPage() {
     setExporting(true);
     try {
       const params: SubjectListParams = {
-        page: currentPage,
-        limit: itemsPerPage,
         sort: sortField,
         order: sortOrder,
       };
-      if (searchQuery) params.q = `~${searchQuery}`;
+      if (appliedSearchRef.current) params.q = `~${appliedSearchRef.current}`;
       if (filterStatus) params.status = filterStatus;
       if (filterScenarioId) params.scenario_id = filterScenarioId;
       if (filterDateFrom) params.from = filterDateFrom;
       if (filterDateTo) params.to = filterDateTo;
+      const validConditions = advConditions.filter((c) => c.value.trim());
+      if (validConditions.length > 0) {
+        params.advanced = 'true';
+        params.conditions = JSON.stringify(validConditions);
+      }
 
-      const res = await fetchSubjects(params); // In production: use exportSubjects
-      void res;
+      const res = await exportSubjects(params);
+      const blob = new Blob([res.data as BlobPart], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ho-so-doi-tuong-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       showToast(MSG.exportSuccess, 'success');
     } catch {
       showToast(MSG.errExport, 'error');
@@ -296,7 +359,7 @@ function SubjectListPage() {
   };
 
   // --- Check if any filter is active ---
-  const hasActiveFilters = searchQuery || filterStatus || filterScenarioId || filterDateFrom || filterDateTo;
+  const hasActiveFilters = searchQuery || filterStatus || filterScenarioId || filterDateFrom || filterDateTo || advConditions.some((c) => c.value.trim());
 
   // --- Sort icon ---
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -304,7 +367,7 @@ function SubjectListPage() {
     const isAsc = isActive && sortOrder === 'asc';
     return (
       <span className={`inline-block ml-1 text-[10px] ${isActive ? 'text-zinc-900' : 'text-zinc-400'}`}>
-        {isActive ? (isAsc ? '\u25B2' : '\u25BC') : '\u25B2'}
+        {isActive ? (isAsc ? '▲' : '▼') : '▲'}
       </span>
     );
   };
@@ -393,20 +456,18 @@ function SubjectListPage() {
           </select>
 
           {/* Date range */}
-          <input
-            type="date"
+          <DatePicker
             value={filterDateFrom}
-            onChange={(e) => handleFilterChange(setFilterDateFrom, e.target.value)}
+            onChange={(v) => handleFilterChange(setFilterDateFrom, v)}
             placeholder={MSG.filterDateFrom}
-            className="h-[30px] px-2 text-[13px] border border-zinc-200 rounded bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700 w-[140px]"
+            className="w-[160px]"
           />
           <span className="text-zinc-400 text-[12px]">&mdash;</span>
-          <input
-            type="date"
+          <DatePicker
             value={filterDateTo}
-            onChange={(e) => handleFilterChange(setFilterDateTo, e.target.value)}
+            onChange={(v) => handleFilterChange(setFilterDateTo, v)}
             placeholder={MSG.filterDateTo}
-            className="h-[30px] px-2 text-[13px] border border-zinc-200 rounded bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700 w-[140px]"
+            className="w-[160px]"
           />
 
           {hasActiveFilters && (
@@ -417,6 +478,8 @@ function SubjectListPage() {
                 setFilterScenarioId('');
                 setFilterDateFrom('');
                 setFilterDateTo('');
+                setAdvConditions([]);
+                setAdvancedOpen(false);
                 setCurrentPage(1);
               }}
               className="text-[12px] text-red-700 hover:text-red-800 hover:underline"
@@ -455,6 +518,113 @@ function SubjectListPage() {
                 </button>
               </span>
             )}
+            {advConditions.filter((c) => c.value.trim()).map((c, i) => (
+              <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-700 text-[11px] rounded">
+                {ADV_FIELDS.find((f) => f.value === c.field)?.label ?? c.field} {c.operator} &quot;{c.value}&quot;
+                <button onClick={() => removeCondition(i)} className="text-red-400 hover:text-red-600">&times;</button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Advanced search toggle */}
+        <div className="flex items-center mt-2">
+          <button
+            onClick={() => {
+              setAdvancedOpen(!advancedOpen);
+              if (!advancedOpen && advConditions.length === 0) {
+                addCondition();
+              }
+            }}
+            className="inline-flex items-center gap-1 text-[12px] text-zinc-600 hover:text-red-700 transition-colors"
+          >
+            <SlidersHorizontal size={12} />
+            {MSG.advSearchTitle}
+          </button>
+        </div>
+
+        {/* Advanced search conditions */}
+        {advancedOpen && (
+          <div className="mt-2 pt-2 border-t border-zinc-100 space-y-2">
+            {advConditions.map((cond, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                {idx > 0 && (
+                  <span className="text-[11px] text-zinc-400 font-medium w-[30px] text-center shrink-0">AND</span>
+                )}
+                {idx === 0 && <span className="w-[30px] shrink-0" />}
+                <select
+                  value={cond.field}
+                  onChange={(e) => updateCondition(idx, 'field', e.target.value)}
+                  className="h-[30px] px-2 text-[12px] border border-zinc-200 rounded bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700 w-[120px]"
+                >
+                  {ADV_FIELDS.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={cond.operator}
+                  onChange={(e) => updateCondition(idx, 'operator', e.target.value)}
+                  className="h-[30px] px-2 text-[12px] border border-zinc-200 rounded bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700 w-[80px]"
+                >
+                  {ADV_OPERATORS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                {cond.field === 'trang_thai' ? (
+                  <select
+                    value={cond.value}
+                    onChange={(e) => updateCondition(idx, 'value', e.target.value)}
+                    className="h-[30px] px-2 text-[12px] border border-zinc-200 rounded bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700 flex-1 min-w-[140px]"
+                  >
+                    <option value="">{MSG.filterAll}</option>
+                    {STATUS_OPTIONS.filter((o) => o.value !== '').map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                ) : cond.field === 'ngay_tao' ? (
+                  <DatePicker
+                    value={cond.value}
+                    onChange={(v) => updateCondition(idx, 'value', v)}
+                    className="flex-1 min-w-[140px]"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={cond.value}
+                    onChange={(e) => updateCondition(idx, 'value', e.target.value)}
+                    placeholder={MSG.advPlaceholder}
+                    className="h-[30px] px-2 text-[12px] border border-zinc-200 rounded bg-white text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-red-700/20 focus:border-red-700 flex-1 min-w-[140px]"
+                  />
+                )}
+                <button
+                  onClick={() => removeCondition(idx)}
+                  className="h-[30px] w-[30px] flex items-center justify-center text-zinc-400 hover:text-red-600 transition-colors shrink-0"
+                  title="Xoá điều kiện"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={addCondition}
+                className="inline-flex items-center gap-1 text-[12px] text-zinc-600 hover:text-red-700 transition-colors"
+              >
+                <PlusCircle size={12} />
+                {MSG.advSearchAdd}
+              </button>
+              {advConditions.length > 0 && (
+                <button
+                  onClick={() => {
+                    setAdvConditions([]);
+                    setCurrentPage(1);
+                  }}
+                  className="text-[12px] text-zinc-400 hover:text-zinc-600 ml-2"
+                >
+                  {MSG.advSearchClear}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -583,7 +753,7 @@ function SubjectListPage() {
                             type="checkbox"
                             checked={selectedIds.has(s.id)}
                             onChange={() => toggleSelect(s.id)}
-                            aria-label={`Ch\u1ECDn h\u1ED3 s\u01A1 ${s.ma_ho_so}`}
+                            aria-label={`Chọn hồ sơ ${s.ma_ho_so}`}
                             className="rounded border-zinc-300"
                           />
                         </td>
@@ -653,12 +823,12 @@ function SubjectListPage() {
                 total,
               )}
             </p>
-            <nav aria-label="Ph\u00E2n trang" className="flex items-center gap-1">
+            <nav aria-label="Phân trang" className="flex items-center gap-1">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1}
                 className="h-[28px] w-[28px] flex items-center justify-center rounded text-zinc-600 hover:bg-zinc-100 disabled:text-zinc-300 disabled:cursor-not-allowed"
-                aria-label="Trang tr\u01B0\u1EDBc"
+                aria-label="Trang trước"
               >
                 <ChevronLeft size={14} />
               </button>

@@ -5,8 +5,9 @@ import PageHeader from '@/components/navigation/PageHeader';
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/Toast';
+import DatePicker from '@/components/ui/DatePicker';
 
-import { fetchSubjectDetail, fetchAreas, updateSubject } from '@/api/subjects.api';
+import { fetchSubjectDetail, fetchAreas, extractAreas, updateSubject } from '@/api/subjects.api';
 import { getMessages } from '@/locales';
 
 import type { SubjectDetail, AreaOption, UpdateSubjectPayload } from '@/types/subject.types';
@@ -32,6 +33,8 @@ interface FormState {
   legal_document_date: string;
   legal_authority: string;
   legal_management_duration: string;
+  legal_start_date: string;
+  legal_end_date: string;
   legal_reason: string;
   notes: string;
 }
@@ -54,6 +57,8 @@ const EMPTY_FORM: FormState = {
   legal_document_date: '',
   legal_authority: '',
   legal_management_duration: '',
+  legal_start_date: '',
+  legal_end_date: '',
   legal_reason: '',
   notes: '',
 };
@@ -87,8 +92,10 @@ function mapDetailToForm(detail: SubjectDetail): FormState {
     legal_document_number: detail.legal?.decision_number ?? '',
     legal_document_date: detail.legal?.decision_date ? detail.legal.decision_date.slice(0, 10) : '',
     legal_authority: detail.legal?.issuing_authority ?? '',
-    legal_management_duration: '',
-    legal_reason: '',
+    legal_management_duration: detail.legal?.management_type ?? '',
+    legal_start_date: detail.legal?.start_date ? detail.legal.start_date.slice(0, 10) : '',
+    legal_end_date: detail.legal?.end_date ? detail.legal.end_date.slice(0, 10) : '',
+    legal_reason: detail.legal?.notes ?? '',
     notes: detail.notes ?? '',
   };
 }
@@ -192,6 +199,8 @@ function buildPayload(original: FormState, current: FormState): UpdateSubjectPay
     current.legal_document_date !== original.legal_document_date ||
     current.legal_authority !== original.legal_authority ||
     current.legal_management_duration !== original.legal_management_duration ||
+    current.legal_start_date !== original.legal_start_date ||
+    current.legal_end_date !== original.legal_end_date ||
     current.legal_reason !== original.legal_reason;
 
   if (legalChanged) {
@@ -200,6 +209,8 @@ function buildPayload(original: FormState, current: FormState): UpdateSubjectPay
       document_date: current.legal_document_date || undefined,
       authority: current.legal_authority.trim() || undefined,
       management_duration: current.legal_management_duration.trim() || undefined,
+      start_date: current.legal_start_date || undefined,
+      end_date: current.legal_end_date || undefined,
       reason: current.legal_reason.trim() || undefined,
     };
     hasChange = true;
@@ -314,8 +325,7 @@ function SubjectEditPage() {
           return;
         }
 
-        const areaList = areasRes.data?.data ?? (areasRes.data as unknown as AreaOption[]);
-        setAreas(Array.isArray(areaList) ? areaList : []);
+        setAreas(extractAreas(areasRes));
 
         const formValues = mapDetailToForm(subjectDetail);
         setForm(formValues);
@@ -476,11 +486,10 @@ function SubjectEditPage() {
                     <label className="block text-[13px] font-medium text-zinc-700 mb-1">
                       {MSG.lblDob} <span className="text-red-600">*</span>
                     </label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={form.date_of_birth}
-                      onChange={handleChange('date_of_birth')}
-                      className={INPUT_CLASS}
+                      onChange={(v) => setForm((prev) => ({ ...prev, date_of_birth: v }))}
+                      error={!!errors.date_of_birth}
                     />
                     {errors.date_of_birth && (
                       <p className="mt-1 text-[12px] text-red-600">{errors.date_of_birth}</p>
@@ -702,11 +711,9 @@ function SubjectEditPage() {
                     <label className="block text-[13px] font-medium text-zinc-700 mb-1">
                       {MSG.lblLegalDate}
                     </label>
-                    <input
-                      type="date"
+                    <DatePicker
                       value={form.legal_document_date}
-                      onChange={handleChange('legal_document_date')}
-                      className={INPUT_CLASS}
+                      onChange={(v) => setForm((prev) => ({ ...prev, legal_document_date: v }))}
                     />
                   </div>
 
@@ -724,7 +731,7 @@ function SubjectEditPage() {
                     />
                   </div>
 
-                  {/* Management duration */}
+                  {/* Management type */}
                   <div>
                     <label className="block text-[13px] font-medium text-zinc-700 mb-1">
                       {MSG.lblLegalDuration}
@@ -735,6 +742,31 @@ function SubjectEditPage() {
                       onChange={handleChange('legal_management_duration')}
                       placeholder={MSG.phLegalDuration}
                       className={INPUT_CLASS}
+                    />
+                  </div>
+
+                  {/* Placeholder for grid alignment */}
+                  <div />
+
+                  {/* Start date */}
+                  <div>
+                    <label className="block text-[13px] font-medium text-zinc-700 mb-1">
+                      {MSG.lblLegalStartDate}
+                    </label>
+                    <DatePicker
+                      value={form.legal_start_date}
+                      onChange={(v) => setForm((prev) => ({ ...prev, legal_start_date: v }))}
+                    />
+                  </div>
+
+                  {/* End date */}
+                  <div>
+                    <label className="block text-[13px] font-medium text-zinc-700 mb-1">
+                      {MSG.lblLegalEndDate}
+                    </label>
+                    <DatePicker
+                      value={form.legal_end_date}
+                      onChange={(v) => setForm((prev) => ({ ...prev, legal_end_date: v }))}
                     />
                   </div>
 

@@ -2,12 +2,17 @@ import api from '@/api/axios';
 import type { ApiResponse } from '@/types/auth.types';
 import type {
   DashboardSummaryResponse,
+  DashboardChartsResponse,
   DashboardEvent,
   DashboardAlert,
 } from '@/types/dashboard.types';
 
 export function fetchDashboardSummary() {
   return api.get<ApiResponse<DashboardSummaryResponse>>('/dashboard/summary');
+}
+
+export function fetchDashboardCharts() {
+  return api.get<ApiResponse<DashboardChartsResponse>>('/dashboard/charts');
 }
 
 export function fetchRecentEvents() {

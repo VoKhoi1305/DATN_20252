@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Pencil,
@@ -11,6 +11,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 
 import PageHeader from '@/components/navigation/PageHeader';
@@ -25,6 +27,11 @@ import {
   fetchSubjectTimeline,
   fetchSubjectDevices,
   fetchSubjectDocuments,
+  uploadSubjectDocument,
+  deleteSubjectDocument,
+  assignScenario,
+  unassignScenario,
+  fetchScenarioOptions,
 } from '@/api/subjects.api';
 import { getUser } from '@/stores/auth.store';
 import { getMessages } from '@/locales';
@@ -37,6 +44,7 @@ import type {
   DevicesResponse,
   DocumentInfo,
   DocumentsResponse,
+  ScenarioOption,
 } from '@/types/subject.types';
 
 const MSG = getMessages().subjects;
@@ -67,8 +75,10 @@ const TAB_LABELS: Record<TabKey, string> = {
 
 // --- Helpers ---
 
-function formatDate(isoString: string): string {
+function formatDate(isoString: string | null | undefined): string {
+  if (!isoString) return '—';
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '—';
   const dd = String(date.getDate()).padStart(2, '0');
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const yyyy = date.getFullYear();
@@ -192,11 +202,11 @@ function TabInfo({ detail }: { detail: SubjectDetail }) {
           <LabelValue label={MSG.lblDecisionDate}>
             {detail.legal?.decision_date ? formatDate(detail.legal.decision_date) : null}
           </LabelValue>
-          <LabelValue label={MSG.lblMgmtType}>{detail.legal?.management_type}</LabelValue>
-          <LabelValue label={MSG.lblStartDate}>
+          <LabelValue label={MSG.lblLegalDuration}>{detail.legal?.management_type}</LabelValue>
+          <LabelValue label={MSG.lblLegalStartDate}>
             {detail.legal?.start_date ? formatDate(detail.legal.start_date) : null}
           </LabelValue>
-          <LabelValue label={MSG.lblEndDate}>
+          <LabelValue label={MSG.lblLegalEndDate}>
             {detail.legal?.end_date ? formatDate(detail.legal.end_date) : null}
           </LabelValue>
           <LabelValue label={MSG.lblAuthority}>{detail.legal?.issuing_authority}</LabelValue>
@@ -208,23 +218,127 @@ function TabInfo({ detail }: { detail: SubjectDetail }) {
 }
 
 // --- Tab: Kich ban ---
-function TabScenario({ detail }: { detail: SubjectDetail }) {
-  if (!detail.scenario) {
-    return (
-      <EmptyState
-        icon={<FileText size={48} />}
-        title={MSG.noScenarioTitle}
-        subtitle={MSG.noScenarioSub}
-      />
-    );
-  }
+function TabScenario({ detail, onRefresh }: { detail: SubjectDetail; onRefresh: () => void }) {
+  const { showToast } = useToast();
+  const [scenarios, setScenarios] = useState<ScenarioOption[]>([]);
+  const [selectedScenarioId, setSelectedScenarioId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const [unassigning, setUnassigning] = useState(false);
+  const [showAssignForm, setShowAssignForm] = useState(false);
+
+  useEffect(() => {
+    fetchScenarioOptions()
+      .then((res) => {
+        const d = res.data as any;
+        const list = d?.data?.data ?? d?.data ?? [];
+        setScenarios(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleAssign = async () => {
+    if (!selectedScenarioId) return;
+    setAssigning(true);
+    try {
+      await assignScenario(detail.id, selectedScenarioId);
+      showToast('Gán kịch bản thành công', 'success');
+      setShowAssignForm(false);
+      setSelectedScenarioId('');
+      onRefresh();
+    } catch {
+      showToast('Có lỗi khi gán kịch bản', 'error');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleUnassign = async () => {
+    setUnassigning(true);
+    try {
+      await unassignScenario(detail.id);
+      showToast('Huỷ gán kịch bản thành công', 'success');
+      onRefresh();
+    } catch {
+      showToast('Có lỗi khi huỷ gán kịch bản', 'error');
+    } finally {
+      setUnassigning(false);
+    }
+  };
 
   return (
-    <Card title={MSG.cardScenarioActive}>
-      <LabelValue label={MSG.lblScenarioName}>{detail.scenario.name}</LabelValue>
-      <LabelValue label={MSG.lblAssignedAt}>{formatDate(detail.scenario.assigned_at)}</LabelValue>
-      <LabelValue label={MSG.lblCheckinFreq}>{detail.scenario.checkin_frequency}</LabelValue>
-    </Card>
+    <div className="space-y-4">
+      {detail.scenario ? (
+        <Card title={MSG.cardScenarioActive}>
+          <LabelValue label={MSG.lblScenarioName}>{detail.scenario.name}</LabelValue>
+          <LabelValue label={MSG.lblAssignedAt}>{formatDate(detail.scenario.assigned_at)}</LabelValue>
+          <LabelValue label={MSG.lblCheckinFreq}>{detail.scenario.checkin_frequency}</LabelValue>
+          <div className="mt-3 pt-3 border-t border-zinc-100 flex gap-2">
+            <button
+              onClick={() => setShowAssignForm(true)}
+              className="px-3 py-1.5 text-xs font-medium text-zinc-600 bg-zinc-100 rounded hover:bg-zinc-200 transition-colors"
+            >
+              Đổi kịch bản
+            </button>
+            <button
+              onClick={handleUnassign}
+              disabled={unassigning}
+              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
+            >
+              {unassigning ? '...' : 'Huỷ gán'}
+            </button>
+          </div>
+        </Card>
+      ) : (
+        <div className="text-center py-10">
+          <FileText size={48} className="mx-auto text-zinc-300 mb-3" />
+          <p className="text-sm text-zinc-500">{MSG.noScenarioTitle}</p>
+          <p className="text-xs text-zinc-400 mt-1 mb-4">{MSG.noScenarioSub}</p>
+          <button
+            onClick={() => setShowAssignForm(true)}
+            className="px-4 py-2 bg-red-700 text-white rounded-md text-sm font-medium hover:bg-red-600 transition-colors"
+          >
+            Gán kịch bản
+          </button>
+        </div>
+      )}
+
+      {showAssignForm && (
+        <Card title="Gán kịch bản quản lý">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-600 mb-1">Chọn kịch bản</label>
+              <select
+                value={selectedScenarioId}
+                onChange={(e) => setSelectedScenarioId(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              >
+                <option value="">-- Chọn kịch bản --</option>
+                {scenarios.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.code} — {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAssign}
+                disabled={!selectedScenarioId || assigning}
+                className="px-4 py-2 bg-red-700 text-white rounded-md text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {assigning ? '...' : 'Xác nhận gán'}
+              </button>
+              <button
+                onClick={() => { setShowAssignForm(false); setSelectedScenarioId(''); }}
+                className="px-4 py-2 border border-zinc-300 text-zinc-600 rounded-md text-sm hover:bg-zinc-50 transition-colors"
+              >
+                Huỷ
+              </button>
+            </div>
+          </div>
+        </Card>
+      )}
+    </div>
   );
 }
 
@@ -242,9 +356,10 @@ function TabTimeline({ subjectId }: { subjectId: string }) {
     setLoading(true);
     try {
       const res = await fetchSubjectTimeline(subjectId, { page: p, limit });
-      const body = res.data as unknown as TimelineResponse;
-      setEntries(body.data);
-      setTotal(body.total);
+      const raw = res.data as any;
+      const body = (raw?.data ?? raw) as TimelineResponse;
+      setEntries(body.data ?? []);
+      setTotal(body.total ?? 0);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401) return;
@@ -285,34 +400,37 @@ function TabTimeline({ subjectId }: { subjectId: string }) {
 
   return (
     <div className="bg-white border border-zinc-200 rounded overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left min-w-[600px]" role="table">
-          <caption className="sr-only">{MSG.tabTimeline}</caption>
-          <thead>
-            <tr className="border-b border-zinc-200 text-[11px] text-zinc-500 uppercase tracking-wider">
-              <th className="px-3 py-2 font-medium w-[110px]">Thời gian</th>
-              <th className="px-3 py-2 font-medium w-[90px]">Nguồn</th>
-              <th className="px-3 py-2 font-medium w-[120px]">Loại</th>
-              <th className="px-3 py-2 font-medium">Chi tiết</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
+      {/* Visual timeline */}
+      <div className="px-4 py-3">
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-[7px] top-0 bottom-0 w-px bg-zinc-200" />
+          <div className="space-y-0">
             {entries.map((entry) => (
-              <tr key={entry.id} className="h-10 hover:bg-zinc-50 transition-colors">
-                <td className="px-3 text-[12px] text-zinc-500 tabular-nums">
-                  {formatDate(entry.created_at)}
-                </td>
-                <td className="px-3">
-                  <Badge variant={entry.source === 'ALERT' ? 'urgent' : 'info'}>
-                    {entry.source}
-                  </Badge>
-                </td>
-                <td className="px-3 text-[13px] text-zinc-900">{entry.type}</td>
-                <td className="px-3 text-[13px] text-zinc-700">{entry.detail}</td>
-              </tr>
+              <div key={entry.id} className="relative flex items-start gap-3 py-2.5 group">
+                {/* Dot */}
+                <div className={`relative z-10 mt-0.5 h-[15px] w-[15px] rounded-full border-2 shrink-0 ${
+                  entry.source === 'ALERT'
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-blue-500 bg-blue-50'
+                }`} />
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={entry.source === 'ALERT' ? 'urgent' : 'info'}>
+                      {entry.source}
+                    </Badge>
+                    <span className="text-[13px] font-medium text-zinc-900">{entry.type}</span>
+                    <span className="text-[11px] text-zinc-400 tabular-nums ml-auto">{formatDate(entry.created_at)}</span>
+                  </div>
+                  {entry.detail && (
+                    <p className="text-[12px] text-zinc-600 mt-0.5">{entry.detail}</p>
+                  )}
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
 
       {/* Pagination */}
@@ -378,27 +496,56 @@ function TabDocuments({ subjectId }: { subjectId: string }) {
   const { showToast } = useToast();
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadDocuments = useCallback(() => {
     setLoading(true);
     fetchSubjectDocuments(subjectId)
       .then((res) => {
-        if (cancelled) return;
-        const body = res.data as unknown as DocumentsResponse;
-        setDocuments(body.data);
+        const raw = res.data as any;
+        const body = (raw?.data ?? raw) as DocumentsResponse;
+        setDocuments(body.data ?? []);
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
         const status = (err as { response?: { status?: number } })?.response?.status;
         if (status === 401) return;
         showToast(MSG.errSystem, 'error');
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
+      .finally(() => setLoading(false));
   }, [subjectId, showToast]);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadSubjectDocument(subjectId, file, 'OTHER');
+      showToast('Tải file lên thành công', 'success');
+      loadDocuments();
+    } catch (err: unknown) {
+      const msg = (err as any)?.response?.data?.message ?? 'Không thể tải file lên';
+      showToast(msg, 'error');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (docId: string, docName: string) => {
+    if (!confirm(`Xoá tài liệu "${docName}"?`)) return;
+    try {
+      await deleteSubjectDocument(subjectId, docId);
+      showToast('Đã xoá tài liệu', 'success');
+      setDocuments((prev) => prev.filter((d) => d.id !== docId));
+    } catch {
+      showToast('Không thể xoá tài liệu', 'error');
+    }
+  };
 
   if (loading) {
     return (
@@ -416,68 +563,93 @@ function TabDocuments({ subjectId }: { subjectId: string }) {
     );
   }
 
-  if (documents.length === 0) {
-    return (
-      <EmptyState
-        icon={<FolderOpen size={48} />}
-        title={MSG.noDocsTitle}
-        subtitle={MSG.noDocsSub}
-      />
-    );
-  }
-
   return (
-    <div className="bg-white border border-zinc-200 rounded overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-zinc-100">
-        <h3 className="text-[13px] font-semibold text-zinc-900">{MSG.cardDocuments}</h3>
+    <div className="space-y-3">
+      {/* Upload button */}
+      <div className="flex justify-end">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+          onChange={handleUpload}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-700 text-white rounded-md text-[12px] font-medium hover:bg-red-600 disabled:opacity-50 transition-colors"
+        >
+          <Upload size={13} />
+          {uploading ? 'Đang tải...' : 'Tải tài liệu lên'}
+        </button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left min-w-[600px]" role="table">
-          <caption className="sr-only">{MSG.cardDocuments}</caption>
-          <thead>
-            <tr className="border-b border-zinc-200 text-[11px] text-zinc-500 uppercase tracking-wider">
-              <th className="px-3 py-2 font-medium w-[50px]">#</th>
-              <th className="px-3 py-2 font-medium">Tên file</th>
-              <th className="px-3 py-2 font-medium w-[80px]">Loại</th>
-              <th className="px-3 py-2 font-medium w-[80px]">Kích thước</th>
-              <th className="px-3 py-2 font-medium w-[110px]">Ngày tạo</th>
-              <th className="px-3 py-2 font-medium w-[80px] text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100">
-            {documents.map((doc, index) => (
-              <tr key={doc.id} className="h-10 hover:bg-zinc-50 transition-colors">
-                <td className="px-3 text-[12px] text-zinc-500">{index + 1}</td>
-                <td className="px-3 text-[13px] text-zinc-900 truncate max-w-[300px]" title={doc.original_name}>
-                  {doc.original_name}
-                </td>
-                <td className="px-3">
-                  <span className="text-[11px] font-medium text-zinc-600 uppercase">
-                    {doc.file_type}
-                  </span>
-                </td>
-                <td className="px-3 text-[12px] text-zinc-500 tabular-nums">
-                  {formatFileSize(doc.size)}
-                </td>
-                <td className="px-3 text-[12px] text-zinc-500 tabular-nums">
-                  {formatDate(doc.created_at)}
-                </td>
-                <td className="px-3 text-right">
-                  <a
-                    href={doc.stored_path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[12px] text-red-700 hover:text-red-800 hover:underline"
-                  >
-                    <Download size={12} />
-                    Tải
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+      {documents.length === 0 ? (
+        <EmptyState
+          icon={<FolderOpen size={48} />}
+          title={MSG.noDocsTitle}
+          subtitle={MSG.noDocsSub}
+        />
+      ) : (
+        <div className="bg-white border border-zinc-200 rounded overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-zinc-100">
+            <h3 className="text-[13px] font-semibold text-zinc-900">{MSG.cardDocuments}</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[600px]" role="table">
+              <caption className="sr-only">{MSG.cardDocuments}</caption>
+              <thead>
+                <tr className="border-b border-zinc-200 text-[11px] text-zinc-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 font-medium w-[50px]">#</th>
+                  <th className="px-3 py-2 font-medium">Tên file</th>
+                  <th className="px-3 py-2 font-medium w-[80px]">Loại</th>
+                  <th className="px-3 py-2 font-medium w-[80px]">Kích thước</th>
+                  <th className="px-3 py-2 font-medium w-[110px]">Ngày tạo</th>
+                  <th className="px-3 py-2 font-medium w-[120px] text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {documents.map((doc, index) => (
+                  <tr key={doc.id} className="h-10 hover:bg-zinc-50 transition-colors">
+                    <td className="px-3 text-[12px] text-zinc-500">{index + 1}</td>
+                    <td className="px-3 text-[13px] text-zinc-900 truncate max-w-[300px]" title={doc.original_name}>
+                      {doc.original_name}
+                    </td>
+                    <td className="px-3">
+                      <span className="text-[11px] font-medium text-zinc-600 uppercase">
+                        {doc.file_type}
+                      </span>
+                    </td>
+                    <td className="px-3 text-[12px] text-zinc-500 tabular-nums">
+                      {formatFileSize(doc.size)}
+                    </td>
+                    <td className="px-3 text-[12px] text-zinc-500 tabular-nums">
+                      {formatDate(doc.created_at)}
+                    </td>
+                    <td className="px-3 text-right space-x-2">
+                      <a
+                        href={doc.stored_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[12px] text-red-700 hover:text-red-800 hover:underline"
+                      >
+                        <Download size={12} />
+                        Tải
+                      </a>
+                      <button
+                        onClick={() => handleDelete(doc.id, doc.original_name)}
+                        className="inline-flex items-center gap-1 text-[12px] text-zinc-500 hover:text-red-700"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -495,9 +667,10 @@ function TabDevices({ subjectId }: { subjectId: string }) {
     fetchSubjectDevices(subjectId)
       .then((res) => {
         if (cancelled) return;
-        const body = res.data as unknown as DevicesResponse;
-        setCurrent(body.current);
-        setHistory(body.history);
+        const raw = res.data as any;
+        const body = (raw?.data ?? raw) as DevicesResponse;
+        setCurrent(body.current ?? null);
+        setHistory(body.history ?? []);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -577,12 +750,12 @@ function TabDevices({ subjectId }: { subjectId: string }) {
                     <td className="px-3 font-mono text-[12px] text-zinc-600 tracking-wide">
                       {device.device_id}
                     </td>
-                    <td className="px-3 text-[13px] text-zinc-900">{device.device_model ?? '\u2014'}</td>
+                    <td className="px-3 text-[13px] text-zinc-900">{device.device_model ?? '—'}</td>
                     <td className="px-3 text-[12px] text-zinc-500 tabular-nums">
                       {formatDate(device.enrolled_at)}
                     </td>
                     <td className="px-3 text-[12px] text-zinc-500 tabular-nums">
-                      {device.replaced_at ? formatDate(device.replaced_at) : '\u2014'}
+                      {device.replaced_at ? formatDate(device.replaced_at) : '—'}
                     </td>
                     <td className="px-3">
                       <Badge variant={device.status === 'ACTIVE' ? 'processing' : 'pending'}>
@@ -670,7 +843,8 @@ function SubjectDetailPage() {
     setError(null);
     try {
       const res = await fetchSubjectDetail(id);
-      setDetail(res.data as unknown as SubjectDetail);
+      const raw = res.data as any;
+      setDetail((raw?.data ?? raw) as SubjectDetail);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401) return;
@@ -693,7 +867,7 @@ function SubjectDetailPage() {
   // --- Set document title ---
   useEffect(() => {
     document.title = detail
-      ? `${detail.ma_ho_so} \u2014 ${MSG.detailTitle} \u2014 SMTTS`
+      ? `${detail.ma_ho_so} — ${MSG.detailTitle} — SMTTS`
       : MSG.detailDocTitle;
   }, [detail]);
 
@@ -726,7 +900,7 @@ function SubjectDetailPage() {
       case 'info':
         return <TabInfo detail={detail} />;
       case 'scenario':
-        return <TabScenario detail={detail} />;
+        return <TabScenario detail={detail} onRefresh={loadDetail} />;
       case 'timeline':
         return <TabTimeline subjectId={id} />;
       case 'documents':

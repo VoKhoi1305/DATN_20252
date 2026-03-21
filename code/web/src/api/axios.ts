@@ -35,7 +35,9 @@ api.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // config.headers.Authorization = `Bearer ${token}`;
+      config.headers = config.headers || {};
+      config.headers.set('Authorization', `Bearer ${token}`);
     }
     return config;
   },

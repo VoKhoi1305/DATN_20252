@@ -4,7 +4,7 @@ const layout = {
   brandLine1: 'Hệ thống Quản lý,',
   brandLine2: 'Theo dõi và Truy vết',
   brandLine3: 'Đối tượng thuộc Diện Quản lý',
-  copyright: '\u00A9 2026 SMTTS',
+  copyright: '© 2026 SMTTS',
 
   // Topbar
   ariaMenu: 'Menu',
@@ -15,14 +15,15 @@ const layout = {
   navProfiles: 'Hồ sơ',
   navEvents: 'Event',
   navAlerts: 'Alert',
+  navAlertRules: 'Quy tắc cảnh báo',
+  navEscalationRules: 'Quy tắc leo thang',
   navCases: 'Case',
   navApprovals: 'Xét duyệt',
   navTrace: 'Truy vết',
   navMap: 'Bản đồ',
   navScenarios: 'Kịch bản',
-  navReports: 'Báo cáo',
   navAdminSection: 'Quản trị',
-  navAdmin: 'QUẢN TRỊ',
+  navAdmin: 'Tài khoản',
 
   // Common UI
   ariaClose: 'Đóng',
