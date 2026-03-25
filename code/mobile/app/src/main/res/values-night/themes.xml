@@ -1,0 +1,20 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Force light theme for SMTTS (government system, no dark mode) -->
+    <style name="Base.Theme.SMTTS" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/smtts_red_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/smtts_red_100</item>
+        <item name="colorOnPrimaryContainer">@color/smtts_red_900</item>
+        <item name="colorError">@color/smtts_red_700</item>
+        <item name="colorOnError">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/smtts_zinc_900</item>
+        <item name="colorOnSurfaceVariant">@color/smtts_zinc_500</item>
+        <item name="colorOutline">@color/smtts_zinc_300</item>
+        <item name="colorOutlineVariant">@color/smtts_zinc_200</item>
+        <item name="android:statusBarColor">@color/smtts_red_700</item>
+        <item name="android:navigationBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+    </style>
+</resources>

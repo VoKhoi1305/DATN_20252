@@ -8,6 +8,8 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { Subject } from '../subjects/entities/subject.entity';
+import { Area } from '../areas/entities/area.entity';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -23,7 +25,7 @@ import { UsersModule } from '../users/users.module';
         },
       }),
     }),
-    TypeOrmModule.forFeature([RefreshToken]),
+    TypeOrmModule.forFeature([RefreshToken, Subject, Area]),
     UsersModule,
   ],
   controllers: [AuthController],

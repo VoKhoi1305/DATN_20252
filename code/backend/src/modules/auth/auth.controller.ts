@@ -14,6 +14,7 @@ import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
+import { ActivateDto } from './dto/activate.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -62,6 +63,26 @@ export class AuthController {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       user: result.user,
+    };
+  }
+
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Post('activate')
+  @HttpCode(HttpStatus.CREATED)
+  async activate(@Body() activateDto: ActivateDto) {
+    const result = await this.authService.activate(
+      activateDto.subjectCode,
+      activateDto.cccd,
+      activateDto.password,
+      activateDto.confirmPassword,
+    );
+
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: result.user,
+      requireEnrollment: true,
     };
   }
 

@@ -14,8 +14,10 @@ import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
 import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
-import { User, UserRole, UserStatus } from '../users/entities/user.entity';
+import { User, UserRole, UserStatus, DataScopeLevel } from '../users/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { Subject, SubjectLifecycle } from '../subjects/entities/subject.entity';
+import { Area } from '../areas/entities/area.entity';
 import { ErrorCodes } from '../../common/constants/error-codes';
 
 const SALT_ROUNDS = 10;
@@ -30,6 +32,10 @@ export class AuthService {
     private readonly configService: ConfigService,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(Subject)
+    private readonly subjectRepository: Repository<Subject>,
+    @InjectRepository(Area)
+    private readonly areaRepository: Repository<Area>,
   ) {}
 
   async login(
@@ -121,13 +127,13 @@ export class AuthService {
       return {
         requireOtpSetup: true,
         ...tokens,
-        user: this.sanitizeUser(user),
+        user: await this.sanitizeUser(user),
       };
     }
 
     return {
       ...tokens,
-      user: this.sanitizeUser(user),
+      user: await this.sanitizeUser(user),
     };
   }
 
@@ -172,7 +178,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user);
     return {
       ...tokens,
-      user: this.sanitizeUser(user),
+      user: await this.sanitizeUser(user),
     };
   }
 
@@ -266,7 +272,7 @@ export class AuthService {
     return {
       backupCodes,
       ...tokens,
-      user: this.sanitizeUser(user),
+      user: await this.sanitizeUser(user),
     };
   }
 
@@ -349,6 +355,86 @@ export class AuthService {
         revoked: true,
       });
     }
+  }
+
+  /**
+   * Activate a subject's account for first-time mobile login.
+   * Creates a User record, links it to the Subject, and transitions lifecycle.
+   */
+  async activate(
+    subjectCode: string,
+    cccd: string,
+    password: string,
+    confirmPassword: string,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Partial<User>;
+  }> {
+    if (password !== confirmPassword) {
+      throw new BadRequestException({
+        code: ErrorCodes.PASSWORD_CONFIRM_MISMATCH,
+        message: 'Mật khẩu xác nhận không khớp',
+      });
+    }
+
+    // Find subject by code
+    const subject = await this.subjectRepository.findOne({
+      where: { code: subjectCode },
+    });
+    if (!subject) {
+      throw new NotFoundException({
+        code: ErrorCodes.SUBJECT_NOT_FOUND,
+        message: 'Không tìm thấy hồ sơ với mã này',
+      });
+    }
+
+    // Verify CCCD matches
+    const cccdHash = crypto.createHash('sha256').update(cccd).digest('hex');
+    if (cccdHash !== subject.cccdHash) {
+      throw new BadRequestException({
+        code: ErrorCodes.CCCD_MISMATCH,
+        message: 'Số CCCD không khớp với hồ sơ',
+      });
+    }
+
+    // Check if already activated
+    if (subject.userAccountId) {
+      throw new BadRequestException({
+        code: ErrorCodes.SUBJECT_ALREADY_ACTIVATED,
+        message: 'Tài khoản đã được kích hoạt trước đó. Vui lòng đăng nhập.',
+      });
+    }
+
+    // Create User account for the subject
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const user = await this.usersService.createSubjectAccount({
+      username: cccd,
+      passwordHash,
+      fullName: subject.fullName,
+      phone: subject.phone,
+      role: UserRole.SUBJECT,
+      areaId: subject.areaId,
+      dataScopeLevel: DataScopeLevel.DISTRICT,
+    });
+
+    // Link user account to subject and transition lifecycle
+    await this.subjectRepository.update(subject.id, {
+      userAccountId: user.id,
+      lifecycle: SubjectLifecycle.ENROLLMENT,
+      enrollmentDate: new Date(),
+    });
+
+    // Update last login
+    await this.usersService.updateUser(user.id, { lastLoginAt: new Date() });
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+
+    return {
+      ...tokens,
+      user: await this.sanitizeUser(user),
+    };
   }
 
   async changePassword(
@@ -435,19 +521,35 @@ export class AuthService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  private sanitizeUser(user: User): Partial<User> {
+  private async sanitizeUser(user: User): Promise<{
+    id: string;
+    username: string;
+    fullName: string;
+    role: UserRole;
+    dataScope: {
+      level: DataScopeLevel;
+      areaId: string | null;
+      areaName: string;
+    };
+    otpEnabled: boolean;
+  }> {
+    let areaName = '';
+    if (user.areaId) {
+      const area = await this.areaRepository.findOneBy({ id: user.areaId });
+      areaName = area?.name ?? '';
+    }
+
     return {
       id: user.id,
       username: user.username,
       fullName: user.fullName,
-      email: user.email,
-      phone: user.phone,
       role: user.role,
-      areaId: user.areaId,
-      dataScopeLevel: user.dataScopeLevel,
+      dataScope: {
+        level: user.dataScopeLevel,
+        areaId: user.areaId,
+        areaName,
+      },
       otpEnabled: user.otpEnabled,
-      status: user.status,
-      lastLoginAt: user.lastLoginAt,
     };
   }
 

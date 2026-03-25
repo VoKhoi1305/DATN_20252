@@ -56,6 +56,42 @@ export class UsersService {
     });
   }
 
+  /**
+   * Create a User account for a Subject during first-time activation.
+   * Password is already hashed by the caller.
+   */
+  async createSubjectAccount(data: {
+    username: string;
+    passwordHash: string;
+    fullName: string;
+    phone: string | null;
+    role: UserRole;
+    areaId: string;
+    dataScopeLevel: DataScopeLevel;
+  }): Promise<User> {
+    // Check duplicate username (CCCD)
+    const existing = await this.userRepository.findOneBy({
+      username: data.username,
+    });
+    if (existing) {
+      throw new ConflictException('Tài khoản với số CCCD này đã tồn tại.');
+    }
+
+    const user = this.userRepository.create({
+      username: data.username,
+      passwordHash: data.passwordHash,
+      fullName: data.fullName,
+      phone: data.phone,
+      role: data.role,
+      areaId: data.areaId,
+      dataScopeLevel: data.dataScopeLevel,
+      status: UserStatus.ACTIVE,
+      otpEnabled: false,
+    });
+
+    return this.userRepository.save(user);
+  }
+
   // ====================== CRUD ======================
 
   async list(query: ListUsersDto, currentUser: User) {

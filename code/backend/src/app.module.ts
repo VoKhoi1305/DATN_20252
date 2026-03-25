@@ -14,6 +14,8 @@ import { AlertsModule } from './modules/alerts/alerts.module';
 import { CasesModule } from './modules/cases/cases.module';
 import { SeedModule } from './modules/seed/seed.module';
 import { databaseConfigFactory } from './config/database.config';
+import { biometricDatabaseConfigFactory } from './config/biometric-database.config';
+import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -26,6 +28,12 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: databaseConfigFactory,
+    }),
+    TypeOrmModule.forRootAsync({
+      name: 'biometric',
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: biometricDatabaseConfigFactory,
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -46,6 +54,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     EventsModule,
     AlertsModule,
     CasesModule,
+    EnrollmentModule,
     SeedModule,
   ],
   providers: [

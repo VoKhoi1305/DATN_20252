@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">SMTTS</string>
+
+    <!-- Branding -->
+    <string name="brand_name">SMTTS</string>
+    <string name="brand_description">Hệ thống Quản lý,\nTheo dõi và Truy vết\nĐối tượng thuộc Diện Quản lý</string>
+
+    <!-- Login screen -->
+    <string name="login_title">Đăng nhập hệ thống</string>
+    <string name="login_subtitle">Nhập tài khoản để tiếp tục</string>
+    <string name="login_username_label">Tên đăng nhập</string>
+    <string name="login_username_hint">Nhập tên đăng nhập</string>
+    <string name="login_password_label">Mật khẩu</string>
+    <string name="login_password_hint">Nhập mật khẩu</string>
+    <string name="login_submit">Đăng nhập</string>
+    <string name="login_submitting">Đang đăng nhập…</string>
+    <string name="login_activate_link">Kích hoạt tài khoản lần đầu</string>
+
+    <!-- Activation screen -->
+    <string name="activate_title">Kích hoạt tài khoản</string>
+    <string name="activate_subtitle">Nhập thông tin hồ sơ để tạo tài khoản đăng nhập</string>
+    <string name="activate_subject_code_label">Mã hồ sơ</string>
+    <string name="activate_subject_code_hint">VD: HS-2026-0001</string>
+    <string name="activate_cccd_label">Số CCCD</string>
+    <string name="activate_cccd_hint">Nhập 12 chữ số CCCD</string>
+    <string name="activate_password_label">Mật khẩu mới</string>
+    <string name="activate_password_hint">Tối thiểu 8 ký tự</string>
+    <string name="activate_confirm_password_label">Xác nhận mật khẩu</string>
+    <string name="activate_confirm_password_hint">Nhập lại mật khẩu</string>
+    <string name="activate_submit">Kích hoạt</string>
+    <string name="activate_submitting">Đang kích hoạt…</string>
+    <string name="activate_login_link">Đã có tài khoản? Đăng nhập</string>
+    <string name="activate_success">Kích hoạt tài khoản thành công!</string>
+
+    <!-- Activation validation -->
+    <string name="error_subject_code_required">Vui lòng nhập mã hồ sơ</string>
+    <string name="error_cccd_required">Vui lòng nhập số CCCD</string>
+    <string name="error_cccd_length">Số CCCD phải có đúng 12 chữ số</string>
+    <string name="error_cccd_format">Số CCCD chỉ chứa chữ số</string>
+    <string name="error_password_format">Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số</string>
+    <string name="error_password_min_8">Mật khẩu tối thiểu 8 ký tự</string>
+    <string name="error_confirm_password_required">Vui lòng xác nhận mật khẩu</string>
+    <string name="error_password_mismatch">Mật khẩu xác nhận không khớp</string>
+
+    <!-- Activation API errors -->
+    <string name="error_subject_not_found">Không tìm thấy hồ sơ với mã này</string>
+    <string name="error_cccd_mismatch">Số CCCD không khớp với hồ sơ</string>
+    <string name="error_already_activated">Tài khoản đã được kích hoạt trước đó. Vui lòng đăng nhập.</string>
+    <string name="error_cccd_conflict">Tài khoản với số CCCD này đã tồn tại</string>
+
+    <!-- Login validation -->
+    <string name="error_username_required">Vui lòng nhập tên đăng nhập</string>
+    <string name="error_username_min_length">Tên đăng nhập tối thiểu 3 ký tự</string>
+    <string name="error_password_required">Vui lòng nhập mật khẩu</string>
+    <string name="error_password_min_length">Mật khẩu tối thiểu 6 ký tự</string>
+
+    <!-- API error messages -->
+    <string name="error_401">Tên đăng nhập hoặc mật khẩu không đúng</string>
+    <string name="error_403">Tài khoản đã bị khoá. Vui lòng liên hệ quản trị viên.</string>
+    <string name="error_429">Quá nhiều lần thử. Vui lòng đợi 5 phút.</string>
+    <string name="error_network">Không có kết nối mạng. Vui lòng thử lại.</string>
+    <string name="error_system">Lỗi hệ thống. Vui lòng thử lại sau.</string>
+    <string name="session_expired">Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.</string>
+
+    <!-- OTP placeholder messages -->
+    <string name="otp_required_message">Vui lòng xác thực OTP để tiếp tục.</string>
+    <string name="otp_setup_required_message">Vui lòng thiết lập OTP để tiếp tục.</string>
+
+    <!-- Enrollment screen -->
+    <string name="enrollment_title">Đăng ký sinh trắc học</string>
+    <string name="enrollment_subtitle">Hoàn thành 2 bước để kích hoạt đầy đủ tài khoản</string>
+    <string name="enrollment_step_nfc">Quét NFC</string>
+    <string name="enrollment_step_face">Quét mặt</string>
+    <string name="enrollment_nfc_title">Bước 1: Quét NFC trên CCCD</string>
+    <string name="enrollment_nfc_instruction">Đặt mặt sau thẻ CCCD lên vùng NFC của điện thoại (thường ở mặt sau, phần giữa). Giữ thẻ ổn định cho đến khi đọc xong.</string>
+    <string name="enrollment_nfc_waiting">Đang chờ quét NFC…</string>
+    <string name="enrollment_nfc_reading">Đang đọc chip CCCD…</string>
+    <string name="enrollment_nfc_success">Đăng ký NFC thành công</string>
+    <string name="enrollment_nfc_error">Không thể đọc chip CCCD. Vui lòng thử lại.</string>
+    <string name="enrollment_face_title">Bước 2: Chụp ảnh khuôn mặt</string>
+    <string name="enrollment_face_instruction">Nhìn thẳng vào camera, đảm bảo ánh sáng đầy đủ. Ảnh sẽ được gửi lên server để AI xác thực (InsightFace/ArcFace).</string>
+    <string name="enrollment_face_capture_btn">Chụp ảnh khuôn mặt</string>
+    <string name="enrollment_face_processing">Đang xử lý…</string>
+    <string name="enrollment_face_success">Đăng ký khuôn mặt thành công</string>
+    <string name="enrollment_continue">Tiếp tục vào ứng dụng</string>
+    <string name="enrollment_camera_permission_denied">Cần quyền camera để chụp ảnh khuôn mặt</string>
+
+    <!-- Footer -->
+    <string name="footer_copyright">© 2026 SMTTS</string>
+</resources>

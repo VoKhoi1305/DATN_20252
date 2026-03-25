@@ -19,6 +19,7 @@ services:
       - ../scripts/migrations/001_smtts_main_init.sql:/docker-entrypoint-initdb.d/001_init.sql
       - ../scripts/migrations/003_seed_data.sql:/docker-entrypoint-initdb.d/003_seed.sql
       - ../scripts/migrations/004_seed_dashboard_data.sql:/docker-entrypoint-initdb.d/004_seed_dashboard.sql
+      - ../scripts/migrations/008_seed_mobile_test_subjects.sql:/docker-entrypoint-initdb.d/008_seed_mobile.sql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U smtts_user -d smtts_main']
       interval: 10s
@@ -46,6 +47,29 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ============================================================
+  # Face Recognition Service (Python/FastAPI + InsightFace/ArcFace)
+  # ============================================================
+  face-recognition:
+    build:
+      context: ../face-recognition
+      dockerfile: Dockerfile
+    container_name: smtts-face-recognition
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+    environment:
+      FACE_DET_MODEL: buffalo_l
+      FACE_DEFAULT_MATCH_THRESHOLD: '0.45'
+      FACE_LIVENESS_THRESHOLD: '0.5'
+      FACE_ENABLE_LIVENESS: 'true'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # Models take time to load
 
   # ============================================================
   # Redis — Cache & Sessions

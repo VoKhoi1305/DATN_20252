@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Dark red shield (full shape) -->
+    <path
+        android:pathData="M24,4L6,12V22C6,33.1 13.68,43.48 24,46C34.32,43.48 42,33.1 42,22V12L24,4Z"
+        android:fillColor="#B91C1C"
+        android:strokeColor="#991B1B"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round" />
+    <!-- Lighter red shield (left half) -->
+    <path
+        android:pathData="M24,4L6,12V22C6,33.1 13.68,43.48 24,46V4Z"
+        android:fillColor="#DC2626"
+        android:strokeColor="#991B1B"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round" />
+    <!-- White checkmark -->
+    <path
+        android:pathData="M18,24L22,28L30,20"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+</vector>

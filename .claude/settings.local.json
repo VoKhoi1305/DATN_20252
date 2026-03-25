@@ -104,7 +104,15 @@
       "Bash(npx ts-node -e \":*)",
       "Bash(node -e \":*)",
       "Bash(wc:*)",
-      "Bash(\"C:/Program Files/nodejs/npx.cmd\" tsc -p E:/DATN_20252/code/backend/tsconfig.json --noEmit)"
+      "Bash(\"C:/Program Files/nodejs/npx.cmd\" tsc -p E:/DATN_20252/code/backend/tsconfig.json --noEmit)",
+      "Bash(node -e \"require\\(''''typescript''''\\)\")",
+      "Bash(npm run:*)",
+      "Bash(where npm:*)",
+      "Bash(PATH=\"/c/Program Files/nodejs:$PATH\" npm run build)",
+      "Bash(DOCKER_CONFIG=/dev/null docker build -t smtts-face-recognition .)",
+      "Bash(mkdir -p /tmp/docker-cfg)",
+      "Bash(DOCKER_CONFIG=/tmp/docker-cfg docker build -t smtts-face-recognition E:/DATN_20252/code/face-recognition)",
+      "Bash(python -m json.tool)"
     ]
   }
 }
