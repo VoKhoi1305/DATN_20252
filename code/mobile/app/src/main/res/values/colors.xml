@@ -21,6 +21,9 @@
     <color name="smtts_zinc_900">#18181B</color>
     <color name="smtts_zinc_950">#09090B</color>
 
+    <!-- SMTTS Green palette -->
+    <color name="smtts_green_700">#15803D</color>
+
     <!-- Semantic aliases -->
     <color name="smtts_primary">@color/smtts_red_700</color>
     <color name="smtts_bg">@color/smtts_zinc_50</color>

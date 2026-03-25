@@ -68,22 +68,110 @@
 
     <!-- Enrollment screen -->
     <string name="enrollment_title">Đăng ký sinh trắc học</string>
-    <string name="enrollment_subtitle">Hoàn thành 2 bước để kích hoạt đầy đủ tài khoản</string>
-    <string name="enrollment_step_nfc">Quét NFC</string>
-    <string name="enrollment_step_face">Quét mặt</string>
-    <string name="enrollment_nfc_title">Bước 1: Quét NFC trên CCCD</string>
-    <string name="enrollment_nfc_instruction">Đặt mặt sau thẻ CCCD lên vùng NFC của điện thoại (thường ở mặt sau, phần giữa). Giữ thẻ ổn định cho đến khi đọc xong.</string>
-    <string name="enrollment_nfc_waiting">Đang chờ quét NFC…</string>
+    <string name="enrollment_subtitle">Hoàn thành 3 bước để kích hoạt tài khoản</string>
+    <string name="enrollment_step_nfc">NFC</string>
+    <string name="enrollment_step_face">Khuôn mặt</string>
+    <string name="enrollment_step_submit">Gửi duyệt</string>
+    <string name="enrollment_back">Quay lại</string>
+
+    <!-- Step 1: NFC -->
+    <string name="enrollment_nfc_title">Quét NFC trên CCCD</string>
+    <string name="enrollment_nfc_instruction">Đặt mặt sau thẻ CCCD lên vùng NFC của điện thoại (thường ở mặt sau, phần giữa).\n\nGiữ thẻ ổn định cho đến khi đọc xong.</string>
+    <string name="enrollment_nfc_config_needed">Cần nhập thông tin trên thẻ CCCD trước khi quét</string>
+    <string name="enrollment_nfc_waiting">Chạm thẻ CCCD vào điện thoại…</string>
     <string name="enrollment_nfc_reading">Đang đọc chip CCCD…</string>
+    <string name="enrollment_nfc_read_ok">Đã đọc chip CCCD thành công</string>
+    <string name="enrollment_nfc_submitting">Đang gửi dữ liệu NFC…</string>
     <string name="enrollment_nfc_success">Đăng ký NFC thành công</string>
     <string name="enrollment_nfc_error">Không thể đọc chip CCCD. Vui lòng thử lại.</string>
-    <string name="enrollment_face_title">Bước 2: Chụp ảnh khuôn mặt</string>
-    <string name="enrollment_face_instruction">Nhìn thẳng vào camera, đảm bảo ánh sáng đầy đủ. Ảnh sẽ được gửi lên server để AI xác thực (InsightFace/ArcFace).</string>
-    <string name="enrollment_face_capture_btn">Chụp ảnh khuôn mặt</string>
-    <string name="enrollment_face_processing">Đang xử lý…</string>
+    <string name="enrollment_nfc_submit_btn">Gửi dữ liệu NFC</string>
+    <string name="enrollment_nfc_save_config">Lưu &amp; Bắt đầu quét</string>
+
+    <!-- Step 2: Face -->
+    <string name="enrollment_face_title">Chụp ảnh khuôn mặt</string>
+    <string name="enrollment_face_instruction">Nhìn thẳng vào camera, đảm bảo ánh sáng đầy đủ.\nẢnh sẽ được gửi lên server để AI xác thực.</string>
+    <string name="enrollment_face_capture_btn">Chụp ảnh</string>
+    <string name="enrollment_face_processing">Đang xử lý ảnh…</string>
     <string name="enrollment_face_success">Đăng ký khuôn mặt thành công</string>
-    <string name="enrollment_continue">Tiếp tục vào ứng dụng</string>
+    <string name="enrollment_face_quality">Chất lượng: %1$.0f%%</string>
+    <string name="enrollment_face_liveness">Liveness: %1$.0f%%</string>
+    <string name="enrollment_face_retry">Chụp lại</string>
     <string name="enrollment_camera_permission_denied">Cần quyền camera để chụp ảnh khuôn mặt</string>
+
+    <!-- Step 3: Submit -->
+    <string name="enrollment_submit_title">Xác nhận &amp; Gửi duyệt</string>
+    <string name="enrollment_submit_subtitle">Kiểm tra thông tin trước khi gửi cho cán bộ phê duyệt</string>
+    <string name="enrollment_submit_nfc_label">NFC/CCCD</string>
+    <string name="enrollment_submit_face_label">Khuôn mặt</string>
+    <string name="enrollment_submit_btn">Gửi đăng ký để phê duyệt</string>
+    <string name="enrollment_submit_submitting">Đang gửi đăng ký…</string>
+    <string name="enrollment_submit_success_title">Đã gửi đăng ký thành công!</string>
+    <string name="enrollment_submit_success_msg">Đăng ký sinh trắc học đã được gửi.\nVui lòng chờ cán bộ quản lý phê duyệt.</string>
+    <string name="enrollment_submit_back_home">Quay về trang chủ</string>
+
+    <!-- Shared -->
+    <string name="enrollment_next">Tiếp tục</string>
+    <string name="enrollment_continue">Tiếp tục vào ứng dụng</string>
+
+    <!-- Main Dashboard -->
+    <string name="dashboard_welcome">Xin chào,</string>
+    <string name="dashboard_role_label">Vai trò</string>
+    <string name="dashboard_area_label">Khu vực</string>
+    <string name="dashboard_quick_actions">Chức năng</string>
+    <string name="dashboard_checkin">Chấm công</string>
+    <string name="dashboard_checkin_desc">Check-in bằng NFC + Khuôn mặt</string>
+    <string name="dashboard_enrollment">Đăng ký\nsinh trắc học</string>
+    <string name="dashboard_enrollment_desc">NFC + Khuôn mặt</string>
+    <string name="dashboard_history">Lịch sử\nchấm công</string>
+    <string name="dashboard_history_desc">Xem lịch sử check-in</string>
+    <string name="dashboard_profile">Thông tin\ncá nhân</string>
+    <string name="dashboard_profile_desc">Hồ sơ của bạn</string>
+    <string name="dashboard_nfc_ready">NFC sẵn sàng</string>
+    <string name="dashboard_nfc_hint">Chạm thẻ CCCD vào điện thoại để quét</string>
+    <string name="dashboard_nfc_not_available">NFC không khả dụng</string>
+    <string name="dashboard_logout">Đăng xuất</string>
+    <string name="dashboard_logout_confirm">Bạn có chắc chắn muốn đăng xuất?</string>
+    <string name="dashboard_logout_yes">Đăng xuất</string>
+    <string name="dashboard_logout_no">Hủy</string>
+    <string name="dashboard_logging_out">Đang đăng xuất…</string>
+    <string name="dashboard_feature_coming_soon">Chức năng đang phát triển</string>
+
+    <!-- NFC Config Dialog -->
+    <string name="nfc_config_title">Cài đặt thông tin CCCD</string>
+    <string name="nfc_config_subtitle">Nhập thông tin trên thẻ CCCD để đọc chip NFC</string>
+    <string name="nfc_config_cccd_label">Số CCCD (12 chữ số)</string>
+    <string name="nfc_config_dob_label">Ngày sinh (dd/mm/yyyy)</string>
+    <string name="nfc_config_expiry_label">Ngày hết hạn (dd/mm/yyyy)</string>
+    <string name="nfc_config_save">Lưu</string>
+    <string name="nfc_config_cancel">Hủy</string>
+    <string name="nfc_config_saved">Đã lưu thông tin CCCD</string>
+    <string name="nfc_config_error_cccd">Số CCCD phải có 12 chữ số</string>
+    <string name="nfc_config_error_dob">Ngày sinh không hợp lệ (dd/mm/yyyy)</string>
+    <string name="nfc_config_error_expiry">Ngày hết hạn không hợp lệ (dd/mm/yyyy)</string>
+    <string name="nfc_config_not_set">Chạm để cài đặt thông tin CCCD</string>
+    <string name="nfc_config_set">Đã cấu hình — Chạm thẻ CCCD để quét</string>
+    <string name="nfc_not_configured_msg">Chưa cài đặt thông tin CCCD.\nChạm vào banner NFC trên trang chủ để cấu hình.</string>
+    <string name="nfc_detected_vibrate">Phát hiện thẻ NFC!</string>
+
+    <!-- NFC Result Popup -->
+    <string name="nfc_result_title">Kết quả quét NFC</string>
+    <string name="nfc_result_reading">Đang đọc chip CCCD…</string>
+    <string name="nfc_result_success">Đọc thành công</string>
+    <string name="nfc_result_partial">Phát hiện thẻ NFC</string>
+    <string name="nfc_result_error">Không thể đọc chip</string>
+    <string name="nfc_result_fullname">Họ và tên</string>
+    <string name="nfc_result_cccd">Số CCCD</string>
+    <string name="nfc_result_dob">Ngày sinh</string>
+    <string name="nfc_result_gender">Giới tính</string>
+    <string name="nfc_result_nationality">Quốc tịch</string>
+    <string name="nfc_result_expiry">Ngày hết hạn</string>
+    <string name="nfc_result_chip_serial">Chip Serial</string>
+    <string name="nfc_result_passive_auth">Xác thực thụ động</string>
+    <string name="nfc_result_passive_auth_ok">Có dữ liệu SOD</string>
+    <string name="nfc_result_passive_auth_none">Không có</string>
+    <string name="nfc_result_close">Đóng</string>
+    <string name="nfc_result_gender_male">Nam</string>
+    <string name="nfc_result_gender_female">Nữ</string>
 
     <!-- Footer -->
     <string name="footer_copyright">© 2026 SMTTS</string>

@@ -17,20 +17,21 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * Enrollment steps: NFC → Face → Complete
+ * Enrollment steps: NFC → Face → Submit (officer approval)
  */
 enum class EnrollmentStep {
     NFC_SCAN,
     FACE_CAPTURE,
-    COMPLETING,
+    SUBMIT,
     DONE
 }
 
 sealed class EnrollmentUiState {
     data object Idle : EnrollmentUiState()
     data class InProgress(val step: EnrollmentStep) : EnrollmentUiState()
-    data class NfcSuccess(val message: String) : EnrollmentUiState()
-    data class FaceSuccess(val message: String, val qualityScore: Double) : EnrollmentUiState()
+    data class NfcReadSuccess(val chipData: CccdNfcReader.CccdChipData) : EnrollmentUiState()
+    data class NfcSubmitSuccess(val message: String) : EnrollmentUiState()
+    data class FaceSuccess(val message: String, val qualityScore: Double, val livenessScore: Double) : EnrollmentUiState()
     data class Complete(val message: String) : EnrollmentUiState()
     data class Error(val message: String, val step: EnrollmentStep) : EnrollmentUiState()
 }
@@ -55,6 +56,18 @@ class EnrollmentViewModel(
     private val _faceDone = MutableStateFlow(false)
     val faceDone: StateFlow<Boolean> = _faceDone.asStateFlow()
 
+    /** Stores the last successfully read NFC chip data for display */
+    private val _nfcChipData = MutableStateFlow<CccdNfcReader.CccdChipData?>(null)
+    val nfcChipData: StateFlow<CccdNfcReader.CccdChipData?> = _nfcChipData.asStateFlow()
+
+    /** Face quality score (0-1) from server */
+    private val _faceQualityScore = MutableStateFlow(0.0)
+    val faceQualityScore: StateFlow<Double> = _faceQualityScore.asStateFlow()
+
+    /** Face liveness score (0-1) from server */
+    private val _faceLivenessScore = MutableStateFlow(0.0)
+    val faceLivenessScore: StateFlow<Double> = _faceLivenessScore.asStateFlow()
+
     private val enrollmentApi = ApiClient.enrollmentApi
 
     init {
@@ -75,10 +88,10 @@ class EnrollmentViewModel(
                             status.enrollmentComplete -> EnrollmentStep.DONE
                             !status.nfcEnrolled -> EnrollmentStep.NFC_SCAN
                             !status.faceEnrolled -> EnrollmentStep.FACE_CAPTURE
-                            else -> EnrollmentStep.COMPLETING
+                            else -> EnrollmentStep.SUBMIT
                         }
                         if (status.enrollmentComplete) {
-                            _uiState.value = EnrollmentUiState.Complete("Đã hoàn tất đăng ký")
+                            _uiState.value = EnrollmentUiState.Complete("Da hoan tat dang ky")
                         }
                     }
                 }
@@ -89,9 +102,19 @@ class EnrollmentViewModel(
     }
 
     /**
+     * Called when NFC chip data has been read locally (before server submit).
+     * Stores the chip data and transitions UI to show result + submit button.
+     */
+    fun onNfcChipRead(chipData: CccdNfcReader.CccdChipData) {
+        _nfcChipData.value = chipData
+        _uiState.value = EnrollmentUiState.NfcReadSuccess(chipData)
+    }
+
+    /**
      * Submit NFC chip data to server.
      */
-    fun submitNfcData(chipData: CccdNfcReader.CccdChipData) {
+    fun submitNfcData() {
+        val chipData = _nfcChipData.value ?: return
         _uiState.value = EnrollmentUiState.InProgress(EnrollmentStep.NFC_SCAN)
         viewModelScope.launch {
             try {
@@ -107,13 +130,11 @@ class EnrollmentViewModel(
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null && body.success) {
-                        val data = body.data
                         _nfcDone.value = true
-                        _currentStep.value = EnrollmentStep.FACE_CAPTURE
-                        _uiState.value = EnrollmentUiState.NfcSuccess(data.message)
+                        _uiState.value = EnrollmentUiState.NfcSubmitSuccess(body.data.message)
                     } else {
                         _uiState.value = EnrollmentUiState.Error(
-                            "Lỗi đăng ký NFC",
+                            "Loi dang ky NFC",
                             EnrollmentStep.NFC_SCAN
                         )
                     }
@@ -128,7 +149,7 @@ class EnrollmentViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "NFC submit error", e)
                 _uiState.value = EnrollmentUiState.Error(
-                    "Lỗi kết nối: ${e.message}",
+                    "Loi ket noi: ${e.message}",
                     EnrollmentStep.NFC_SCAN
                 )
             }
@@ -136,8 +157,16 @@ class EnrollmentViewModel(
     }
 
     /**
+     * Advance to the next step.
+     */
+    fun goToStep(step: EnrollmentStep) {
+        _currentStep.value = step
+    }
+
+    /**
      * Submit face image to server.
      * The server runs InsightFace/ArcFace for detection, quality check, liveness, and embedding.
+     * Does NOT auto-complete enrollment — user must explicitly submit in Step 3.
      */
     fun submitFaceImage(imageBytes: ByteArray) {
         _uiState.value = EnrollmentUiState.InProgress(EnrollmentStep.FACE_CAPTURE)
@@ -153,15 +182,17 @@ class EnrollmentViewModel(
                     if (body != null && body.success) {
                         val data = body.data
                         _faceDone.value = true
+                        _faceQualityScore.value = data.qualityScore
+                        _faceLivenessScore.value = data.livenessScore
                         _uiState.value = EnrollmentUiState.FaceSuccess(
                             data.message,
-                            data.qualityScore
+                            data.qualityScore,
+                            data.livenessScore
                         )
-                        // Auto-complete enrollment
-                        completeEnrollment()
+                        // Do NOT auto-complete — user submits in Step 3
                     } else {
                         _uiState.value = EnrollmentUiState.Error(
-                            "Lỗi đăng ký khuôn mặt",
+                            "Loi dang ky khuon mat",
                             EnrollmentStep.FACE_CAPTURE
                         )
                     }
@@ -176,17 +207,21 @@ class EnrollmentViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "Face submit error", e)
                 _uiState.value = EnrollmentUiState.Error(
-                    "Lỗi kết nối: ${e.message}",
+                    "Loi ket noi: ${e.message}",
                     EnrollmentStep.FACE_CAPTURE
                 )
             }
         }
     }
 
-    private fun completeEnrollment() {
+    /**
+     * Submit enrollment for officer approval (Step 3).
+     * Transitions lifecycle to pending approval state.
+     */
+    fun completeEnrollment() {
         viewModelScope.launch {
             try {
-                _uiState.value = EnrollmentUiState.InProgress(EnrollmentStep.COMPLETING)
+                _uiState.value = EnrollmentUiState.InProgress(EnrollmentStep.SUBMIT)
                 val response = enrollmentApi.completeEnrollment()
                 if (response.isSuccessful) {
                     val body = response.body()
@@ -195,22 +230,22 @@ class EnrollmentViewModel(
                         _uiState.value = EnrollmentUiState.Complete(body.data.message)
                     } else {
                         _uiState.value = EnrollmentUiState.Error(
-                            "Lỗi hoàn tất đăng ký",
-                            EnrollmentStep.COMPLETING
+                            "Loi gui dang ky",
+                            EnrollmentStep.SUBMIT
                         )
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "Unknown error"
                     _uiState.value = EnrollmentUiState.Error(
                         parseErrorMessage(errorBody),
-                        EnrollmentStep.COMPLETING
+                        EnrollmentStep.SUBMIT
                     )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Complete enrollment error", e)
                 _uiState.value = EnrollmentUiState.Error(
-                    "Lỗi hoàn tất: ${e.message}",
-                    EnrollmentStep.COMPLETING
+                    "Loi ket noi: ${e.message}",
+                    EnrollmentStep.SUBMIT
                 )
             }
         }
@@ -223,11 +258,10 @@ class EnrollmentViewModel(
     private fun parseErrorMessage(errorBody: String): String {
         return try {
             val json = com.google.gson.JsonParser.parseString(errorBody).asJsonObject
-            // Backend error format: { success: false, error: { code, message }, timestamp }
             val error = json.getAsJsonObject("error")
-            error?.get("message")?.asString ?: "Lỗi không xác định"
+            error?.get("message")?.asString ?: "Loi khong xac dinh"
         } catch (_: Exception) {
-            "Lỗi hệ thống. Vui lòng thử lại."
+            "Loi he thong. Vui long thu lai."
         }
     }
 

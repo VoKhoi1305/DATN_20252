@@ -15,6 +15,9 @@ class TokenManager(context: Context) {
         private const val KEY_REFRESH_TOKEN = "smtts_refresh_token"
         private const val KEY_TEMP_TOKEN = "smtts_temp_token"
         private const val KEY_USER = "smtts_user"
+        private const val KEY_NFC_CCCD = "smtts_nfc_cccd"
+        private const val KEY_NFC_DOB = "smtts_nfc_dob"
+        private const val KEY_NFC_EXPIRY = "smtts_nfc_expiry"
     }
 
     private val prefs: SharedPreferences =
@@ -69,6 +72,24 @@ class TokenManager(context: Context) {
 
     fun setUser(user: UserInfo) {
         prefs.edit().putString(KEY_USER, gson.toJson(user)).apply()
+    }
+
+    // ── NFC BAC Data ──
+
+    fun getNfcCccd(): String? = prefs.getString(KEY_NFC_CCCD, null)
+    fun getNfcDob(): String? = prefs.getString(KEY_NFC_DOB, null)
+    fun getNfcExpiry(): String? = prefs.getString(KEY_NFC_EXPIRY, null)
+
+    fun saveNfcBacData(cccd: String, dob: String, expiry: String) {
+        prefs.edit()
+            .putString(KEY_NFC_CCCD, cccd)
+            .putString(KEY_NFC_DOB, dob)
+            .putString(KEY_NFC_EXPIRY, expiry)
+            .apply()
+    }
+
+    fun hasNfcBacData(): Boolean {
+        return getNfcCccd() != null && getNfcDob() != null && getNfcExpiry() != null
     }
 
     // ── Auth State ──

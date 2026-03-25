@@ -112,7 +112,14 @@
       "Bash(DOCKER_CONFIG=/dev/null docker build -t smtts-face-recognition .)",
       "Bash(mkdir -p /tmp/docker-cfg)",
       "Bash(DOCKER_CONFIG=/tmp/docker-cfg docker build -t smtts-face-recognition E:/DATN_20252/code/face-recognition)",
-      "Bash(python -m json.tool)"
+      "Bash(python -m json.tool)",
+      "Bash(./gradlew assembleDebug)",
+      "Read(//c/Program Files/Java/**)",
+      "Read(//c/Program Files/Android/Android Studio/jbr/**)",
+      "Read(//e/DATN_20252/code/mobile/$LOCALAPPDATA/Android/**)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:compileDebugKotlin)"
     ]
   }
 }

@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Full Name -->
+    <LinearLayout
+        android:id="@+id/rowNfcFullName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_fullname"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowFullName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:background="@color/smtts_zinc_200" />
+
+    <!-- CCCD Number -->
+    <LinearLayout
+        android:id="@+id/rowNfcCccd"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_cccd"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowCccd"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:background="@color/smtts_zinc_200" />
+
+    <!-- Date of Birth -->
+    <LinearLayout
+        android:id="@+id/rowNfcDob"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_dob"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowDob"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:background="@color/smtts_zinc_200" />
+
+    <!-- Gender -->
+    <LinearLayout
+        android:id="@+id/rowNfcGender"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_gender"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowGender"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:background="@color/smtts_zinc_200" />
+
+    <!-- Nationality -->
+    <LinearLayout
+        android:id="@+id/rowNfcNationality"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_nationality"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowNationality"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:background="@color/smtts_zinc_200" />
+
+    <!-- Expiry Date -->
+    <LinearLayout
+        android:id="@+id/rowNfcExpiry"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_expiry"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowExpiry"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:background="@color/smtts_zinc_200" />
+
+    <!-- Chip Serial -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_chip_serial"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowChipSerial"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:background="@color/smtts_zinc_200" />
+
+    <!-- Passive Auth -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.4"
+            android:text="@string/nfc_result_passive_auth"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_xs" />
+
+        <TextView
+            android:id="@+id/tvNfcRowPassiveAuth"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="0.6"
+            android:textColor="@color/smtts_zinc_900"
+            android:textSize="@dimen/text_xs" />
+    </LinearLayout>
+
+</LinearLayout>

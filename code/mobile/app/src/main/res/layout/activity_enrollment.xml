@@ -1,265 +1,714 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/smtts_bg"
-    android:fillViewport="true">
+    android:background="@color/smtts_zinc_50"
+    tools:context=".ui.enrollment.EnrollmentActivity">
 
+    <!-- ═══ Header Bar ═══ -->
     <LinearLayout
-        android:id="@+id/rootLayout"
-        android:layout_width="match_parent"
+        android:id="@+id/headerBar"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:background="@color/smtts_red_700"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/spacing_md"
+        android:paddingVertical="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Header -->
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@string/enrollment_back"
+            android:padding="2dp"
+            android:src="@drawable/ic_logout"
+            android:rotation="180"
+            app:tint="@color/white" />
+
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:layout_weight="1"
             android:text="@string/enrollment_title"
-            android:textAlignment="center"
-            android:textColor="@color/smtts_primary"
-            android:textSize="22sp"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_lg"
             android:textStyle="bold" />
+    </LinearLayout>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="32dp"
-            android:text="@string/enrollment_subtitle"
-            android:textAlignment="center"
-            android:textColor="@color/smtts_text_secondary"
-            android:textSize="14sp" />
+    <!-- ═══ Step Indicator ═══ -->
+    <LinearLayout
+        android:id="@+id/stepIndicator"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingVertical="@dimen/spacing_md"
+        android:paddingHorizontal="@dimen/spacing_xl"
+        android:background="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerBar">
 
-        <!-- Step Indicators -->
+        <!-- Step 1 -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
             android:gravity="center"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
-            <!-- Step 1: NFC -->
-            <LinearLayout
-                android:id="@+id/stepNfcContainer"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
+            <TextView
+                android:id="@+id/tvStep1"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_step_active"
                 android:gravity="center"
-                android:orientation="vertical">
+                android:text="1"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/stepNfcIndicator"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/ic_shield"
-                    android:gravity="center"
-                    android:text="1"
-                    android:textColor="@color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/enrollment_step_nfc"
-                    android:textColor="@color/smtts_text_secondary"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <!-- Divider -->
-            <View
-                android:layout_width="40dp"
-                android:layout_height="2dp"
-                android:layout_gravity="center_vertical"
-                android:layout_marginBottom="18dp"
-                android:background="@color/smtts_border" />
-
-            <!-- Step 2: Face -->
-            <LinearLayout
-                android:id="@+id/stepFaceContainer"
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/tvStep1Label"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/stepFaceIndicator"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/ic_shield"
-                    android:gravity="center"
-                    android:text="2"
-                    android:textColor="@color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/enrollment_step_face"
-                    android:textColor="@color/smtts_text_secondary"
-                    android:textSize="12sp" />
-            </LinearLayout>
+                android:layout_marginTop="4dp"
+                android:text="@string/enrollment_step_nfc"
+                android:textColor="@color/smtts_red_700"
+                android:textSize="11sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- ═════════════════════════════════════ -->
-        <!-- NFC Scan Section                      -->
-        <!-- ═════════════════════════════════════ -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardNfc"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/white"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+        <!-- Line 1→2 -->
+        <View
+            android:id="@+id/line1"
+            android:layout_width="0dp"
+            android:layout_height="2dp"
+            android:layout_marginHorizontal="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:layout_gravity="top"
+            android:layout_marginTop="15dp"
+            android:background="@drawable/bg_step_line_inactive" />
 
+        <!-- Step 2 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvStep2"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_step_inactive"
+                android:gravity="center"
+                android:text="2"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvStep2Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/enrollment_step_face"
+                android:textColor="@color/smtts_zinc_400"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Line 2→3 -->
+        <View
+            android:id="@+id/line2"
+            android:layout_width="0dp"
+            android:layout_height="2dp"
+            android:layout_marginHorizontal="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:layout_gravity="top"
+            android:layout_marginTop="15dp"
+            android:background="@drawable/bg_step_line_inactive" />
+
+        <!-- Step 3 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvStep3"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_step_inactive"
+                android:gravity="center"
+                android:text="3"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvStep3Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/enrollment_step_submit"
+                android:textColor="@color/smtts_zinc_400"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ═══ Step Content (scrollable) ═══ -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/stepIndicator">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- ═══════════════════════════════════════ -->
+            <!-- STEP 1: NFC SCAN                       -->
+            <!-- ═══════════════════════════════════════ -->
             <LinearLayout
+                android:id="@+id/stepNfc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="@dimen/spacing_md"
+                android:visibility="visible">
 
-                <TextView
+                <!-- NFC Config Section (shown if BAC not configured) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardNfcConfig"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/enrollment_nfc_title"
-                    android:textColor="@color/smtts_zinc_900"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/enrollment_nfc_instruction"
-                    android:textColor="@color/smtts_text_secondary"
-                    android:textSize="14sp" />
-
-                <!-- NFC status message -->
-                <TextView
-                    android:id="@+id/tvNfcStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/enrollment_nfc_waiting"
-                    android:textAlignment="center"
-                    android:textColor="@color/smtts_primary"
-                    android:textSize="14sp"
-                    android:textStyle="italic" />
-
-                <!-- NFC success checkmark (hidden by default) -->
-                <TextView
-                    android:id="@+id/tvNfcSuccess"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textAlignment="center"
-                    android:textColor="#16a34a"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
+                    android:layout_marginBottom="@dimen/spacing_md"
                     android:visibility="gone"
-                    tools:text="Đăng ký NFC thành công" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp">
 
-        <!-- ═════════════════════════════════════ -->
-        <!-- Face Capture Section                  -->
-        <!-- ═════════════════════════════════════ -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardFace"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/white"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:text="@string/enrollment_nfc_config_needed"
+                            android:textColor="@color/smtts_zinc_700"
+                            android:textSize="@dimen/text_sm"
+                            android:textStyle="bold" />
 
-                <TextView
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilNfcCccd"
+                            style="@style/Widget.SMTTS.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:hint="@string/nfc_config_cccd_label">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etNfcCccd"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number"
+                                android:maxLength="12" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilNfcDob"
+                            style="@style/Widget.SMTTS.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:hint="@string/nfc_config_dob_label">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etNfcDob"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="date"
+                                android:maxLength="10" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilNfcExpiry"
+                            style="@style/Widget.SMTTS.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:hint="@string/nfc_config_expiry_label">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etNfcExpiry"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="date"
+                                android:maxLength="10" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSaveNfcConfig"
+                            style="@style/Widget.SMTTS.Button.Login"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/button_height"
+                            android:text="@string/enrollment_nfc_save_config" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- NFC Scan Waiting Area -->
+                <LinearLayout
+                    android:id="@+id/nfcWaitingArea"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/enrollment_face_title"
-                    android:textColor="@color/smtts_zinc_900"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_xl"
+                    android:visibility="gone">
 
-                <TextView
+                    <ImageView
+                        android:id="@+id/ivNfcPulse"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_icon_circle_red"
+                        android:src="@drawable/ic_nfc"
+                        android:contentDescription="NFC"
+                        app:tint="@color/white" />
+
+                    <TextView
+                        android:id="@+id/tvNfcStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/enrollment_nfc_waiting"
+                        android:textColor="@color/smtts_red_700"
+                        android:textSize="@dimen/text_base"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:gravity="center"
+                        android:text="@string/enrollment_nfc_instruction"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+
+                    <ProgressBar
+                        android:id="@+id/progressNfcRead"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:indeterminate="true"
+                        android:indeterminateTint="@color/smtts_red_700"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- NFC Read Result Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardNfcResult"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/enrollment_face_instruction"
-                    android:textColor="@color/smtts_text_secondary"
-                    android:textSize="14sp" />
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="#BBF7D0"
+                    app:strokeWidth="1dp">
 
-                <!-- Camera preview -->
-                <androidx.camera.view.PreviewView
-                    android:id="@+id/cameraPreview"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:text="@string/enrollment_nfc_read_ok"
+                            android:textColor="#16A34A"
+                            android:textSize="@dimen/text_sm"
+                            android:textStyle="bold" />
+
+                        <include
+                            android:id="@+id/nfcDataRows"
+                            layout="@layout/include_nfc_data_rows" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- NFC Submit / Next buttons -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNfcSubmit"
+                    style="@style/Widget.SMTTS.Button.Login"
                     android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    android:layout_marginTop="12dp"
+                    android:layout_height="@dimen/button_height"
+                    android:text="@string/enrollment_nfc_submit_btn"
                     android:visibility="gone" />
 
-                <!-- Capture button -->
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnCaptureFace"
+                    android:id="@+id/btnNfcNext"
+                    style="@style/Widget.SMTTS.Button.Login"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/enrollment_face_capture_btn"
-                    android:textColor="@color/white"
-                    android:enabled="false"
-                    app:backgroundTint="@color/smtts_primary" />
+                    android:layout_height="@dimen/button_height"
+                    android:text="@string/enrollment_next"
+                    android:visibility="gone" />
 
-                <!-- Face success message -->
+                <!-- NFC progress -->
+                <ProgressBar
+                    android:id="@+id/progressNfcSubmit"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- ═══════════════════════════════════════ -->
+            <!-- STEP 2: FACE CAPTURE                   -->
+            <!-- ═══════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/stepFace"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md"
+                android:visibility="gone">
+
                 <TextView
-                    android:id="@+id/tvFaceSuccess"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textAlignment="center"
-                    android:textColor="#16a34a"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
+                    android:layout_marginBottom="@dimen/spacing_sm"
+                    android:text="@string/enrollment_face_title"
+                    android:textColor="@color/smtts_zinc_900"
+                    android:textSize="@dimen/text_lg"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:text="@string/enrollment_face_instruction"
+                    android:textColor="@color/smtts_zinc_500"
+                    android:textSize="@dimen/text_sm" />
+
+                <!-- Camera preview -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <androidx.camera.view.PreviewView
+                        android:id="@+id/cameraPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="360dp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Face quality result (shown after capture) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardFaceResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
                     android:visibility="gone"
-                    tools:text="Đăng ký khuôn mặt thành công" />
+                    app:cardBackgroundColor="#F0FDF4"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#BBF7D0"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/enrollment_face_success"
+                            android:textColor="#16A34A"
+                            android:textSize="@dimen/text_sm"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvFaceQuality"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="@color/smtts_zinc_700"
+                            android:textSize="@dimen/text_sm"
+                            tools:text="Chất lượng: 89%" />
+
+                        <TextView
+                            android:id="@+id/tvFaceLiveness"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/smtts_zinc_700"
+                            android:textSize="@dimen/text_sm"
+                            tools:text="Liveness: 95%" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Capture / Retry buttons -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCaptureFace"
+                    style="@style/Widget.SMTTS.Button.Login"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:text="@string/enrollment_face_capture_btn" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFaceNext"
+                    style="@style/Widget.SMTTS.Button.Login"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:text="@string/enrollment_next"
+                    android:visibility="gone" />
+
+                <ProgressBar
+                    android:id="@+id/progressFace"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:visibility="gone" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- Continue button (shown when enrollment is complete) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnContinue"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="8dp"
-            android:text="@string/enrollment_continue"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:visibility="gone"
-            app:backgroundTint="@color/smtts_primary"
-            app:cornerRadius="8dp" />
+            <!-- ═══════════════════════════════════════ -->
+            <!-- STEP 3: REVIEW & SUBMIT                -->
+            <!-- ═══════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/stepSubmit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md"
+                android:visibility="gone">
 
-        <!-- Loading indicator -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="16dp"
-            android:visibility="gone" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_xs"
+                    android:text="@string/enrollment_submit_title"
+                    android:textColor="@color/smtts_zinc_900"
+                    android:textSize="@dimen/text_lg"
+                    android:textStyle="bold" />
 
-    </LinearLayout>
-</ScrollView>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_lg"
+                    android:text="@string/enrollment_submit_subtitle"
+                    android:textColor="@color/smtts_zinc_500"
+                    android:textSize="@dimen/text_sm" />
+
+                <!-- NFC Summary -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_sm"
+                    app:cardBackgroundColor="#F0FDF4"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#BBF7D0"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/spacing_md">
+
+                        <FrameLayout
+                            android:layout_width="36dp"
+                            android:layout_height="36dp">
+                            <View
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_step_done" />
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_nfc"
+                                app:tint="@color/white"
+                                android:contentDescription="NFC" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/spacing_md"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/enrollment_submit_nfc_label"
+                                android:textColor="#16A34A"
+                                android:textSize="@dimen/text_sm"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvSubmitNfcInfo"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/smtts_zinc_700"
+                                android:textSize="@dimen/text_xs"
+                                tools:text="NGUYEN VAN A — 012345678901" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Face Summary -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_lg"
+                    app:cardBackgroundColor="#F0FDF4"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#BBF7D0"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/spacing_md">
+
+                        <FrameLayout
+                            android:layout_width="36dp"
+                            android:layout_height="36dp">
+                            <View
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_step_done" />
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_person"
+                                app:tint="@color/white"
+                                android:contentDescription="Face" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/spacing_md"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/enrollment_submit_face_label"
+                                android:textColor="#16A34A"
+                                android:textSize="@dimen/text_sm"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvSubmitFaceInfo"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/smtts_zinc_700"
+                                android:textSize="@dimen/text_xs"
+                                tools:text="Chất lượng: 89% — Liveness: 95%" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Submit button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSubmitEnrollment"
+                    style="@style/Widget.SMTTS.Button.Login"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:text="@string/enrollment_submit_btn" />
+
+                <!-- Success area (shown after submit) -->
+                <LinearLayout
+                    android:id="@+id/enrollmentSuccessArea"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingVertical="@dimen/spacing_xl"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:padding="14dp"
+                        android:background="@drawable/bg_step_done"
+                        android:src="@drawable/ic_shield"
+                        android:contentDescription="Success"
+                        app:tint="@color/white" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:gravity="center"
+                        android:text="@string/enrollment_submit_success_title"
+                        android:textColor="#16A34A"
+                        android:textSize="@dimen/text_lg"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:gravity="center"
+                        android:text="@string/enrollment_submit_success_msg"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnBackToHome"
+                        style="@style/Widget.SMTTS.Button.Login"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/button_height"
+                        android:layout_marginTop="@dimen/spacing_lg"
+                        android:text="@string/enrollment_submit_back_home" />
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/progressSubmit"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+        </FrameLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
