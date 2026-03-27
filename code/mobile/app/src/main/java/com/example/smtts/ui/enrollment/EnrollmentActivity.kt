@@ -39,8 +39,12 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
+import java.security.Security
+import android.text.Editable
+import android.text.TextWatcher
 import java.util.regex.Pattern
 
 /**
@@ -77,6 +81,13 @@ class EnrollmentActivity : BaseNfcActivity() {
     // ── Lifecycle ──────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Register the full BouncyCastle provider at position 1 (highest priority)
+        // BEFORE super.onCreate() so it is available for all PACE/BAC crypto operations.
+        // Android ships a stripped-down BC provider that lacks DESede, ECDH, AESCMAC, etc.
+        // Removing it first prevents "duplicate provider" conflicts.
+        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+        Security.insertProviderAt(BouncyCastleProvider(), 1)
+
         super.onCreate(savedInstanceState)
 
         binding = ActivityEnrollmentBinding.inflate(layoutInflater)
@@ -137,6 +148,7 @@ class EnrollmentActivity : BaseNfcActivity() {
 
         // Step 1: NFC
         binding.btnSaveNfcConfig.setOnClickListener { saveNfcConfig() }
+        binding.btnEditNfcConfig.setOnClickListener { showNfcConfigForEdit() }
         binding.btnNfcSubmit.setOnClickListener { viewModel.submitNfcData() }
         binding.btnNfcNext.setOnClickListener { viewModel.goToStep(EnrollmentStep.FACE_CAPTURE) }
 
@@ -147,6 +159,10 @@ class EnrollmentActivity : BaseNfcActivity() {
         // Step 3: Submit
         binding.btnSubmitEnrollment.setOnClickListener { viewModel.completeEnrollment() }
         binding.btnBackToHome.setOnClickListener { navigateToMain() }
+
+        // Auto-format date fields (dd/mm/yyyy)
+        binding.etNfcDob.addTextChangedListener(DateTextWatcher(binding.etNfcDob))
+        binding.etNfcExpiry.addTextChangedListener(DateTextWatcher(binding.etNfcExpiry))
 
         // Initial NFC config state
         updateNfcConfigVisibility()
@@ -312,19 +328,40 @@ class EnrollmentActivity : BaseNfcActivity() {
         val hasBac = tokenManager.hasNfcBacData()
         binding.cardNfcConfig.visibility = if (hasBac) View.GONE else View.VISIBLE
         binding.nfcWaitingArea.visibility = if (hasBac) View.VISIBLE else View.GONE
+        if (hasBac) startNfcPulseAnimation()
+    }
 
-        if (hasBac) {
-            // Pre-fill config fields in case user wants to edit
-            binding.etNfcCccd.setText(tokenManager.getNfcCccd()?.let { yymmddToCccd(it) } ?: "")
-            // Start pulse animation
-            startNfcPulseAnimation()
-        }
+    /**
+     * Hiển thị form nhập lại thông tin BAC (CCCD/Ngày sinh/Ngày hết hạn).
+     * Gọi khi người dùng nhấn "Sửa thông tin thẻ" sau khi đã lưu nhưng quét bị lỗi sai chìa khóa.
+     * Tự động điền lại dữ liệu đang lưu để dễ chỉnh sửa từng trường.
+     */
+    private fun showNfcConfigForEdit() {
+        // Điền lại toàn bộ 3 trường từ dữ liệu đang lưu
+        binding.etNfcCccd.setText(tokenManager.getNfcCccd() ?: "")
+        binding.etNfcDob.setText(tokenManager.getNfcDob()?.let { formatYymmdd(it) } ?: "")
+        binding.etNfcExpiry.setText(tokenManager.getNfcExpiry()?.let { formatYymmdd(it) } ?: "")
+
+        // Xóa lỗi cũ nếu có
+        binding.tilNfcCccd.error = null
+        binding.tilNfcDob.error = null
+        binding.tilNfcExpiry.error = null
+
+        // Chuyển về form nhập liệu
+        binding.nfcWaitingArea.visibility = View.GONE
+        binding.cardNfcConfig.visibility = View.VISIBLE
     }
 
     private fun saveNfcConfig() {
         val cccd = binding.etNfcCccd.text?.toString()?.trim() ?: ""
         val dob = binding.etNfcDob.text?.toString()?.trim() ?: ""
         val expiry = binding.etNfcExpiry.text?.toString()?.trim() ?: ""
+
+        Log.d(TAG, "┌─── saveNfcConfig() RAW INPUT ───")
+        Log.d(TAG, "│ CCCD:   '$cccd' (len=${cccd.length})")
+        Log.d(TAG, "│ DOB:    '$dob' (len=${dob.length})")
+        Log.d(TAG, "│ Expiry: '$expiry' (len=${expiry.length})")
+        Log.d(TAG, "└─────────────────────────────────")
 
         // Validate
         var valid = true
@@ -337,6 +374,7 @@ class EnrollmentActivity : BaseNfcActivity() {
 
         if (!DATE_PATTERN.matcher(dob).matches()) {
             binding.tilNfcDob.error = getString(R.string.nfc_config_error_dob)
+            Log.w(TAG, "DOB validation FAILED: '$dob' does not match dd/MM/yyyy")
             valid = false
         } else {
             binding.tilNfcDob.error = null
@@ -344,6 +382,7 @@ class EnrollmentActivity : BaseNfcActivity() {
 
         if (!DATE_PATTERN.matcher(expiry).matches()) {
             binding.tilNfcExpiry.error = getString(R.string.nfc_config_error_expiry)
+            Log.w(TAG, "Expiry validation FAILED: '$expiry' does not match dd/MM/yyyy")
             valid = false
         } else {
             binding.tilNfcExpiry.error = null
@@ -354,6 +393,13 @@ class EnrollmentActivity : BaseNfcActivity() {
         // Convert dd/mm/yyyy → YYMMDD for BAC
         val dobYymmdd = displayToYymmdd(dob)
         val expiryYymmdd = displayToYymmdd(expiry)
+
+        Log.d(TAG, "┌─── BAC KEY DATA (converted) ───")
+        Log.d(TAG, "│ CCCD:        '$cccd'")
+        Log.d(TAG, "│ DOB YYMMDD:  '$dobYymmdd' (from '$dob')")
+        Log.d(TAG, "│ EXP YYMMDD:  '$expiryYymmdd' (from '$expiry')")
+        Log.d(TAG, "│ DocNumber:   '${cccd.take(9)}' (first 9 of CCCD)")
+        Log.d(TAG, "└─────────────────────────────────")
 
         tokenManager.saveNfcBacData(cccd, dobYymmdd, expiryYymmdd)
         showSnackbar(getString(R.string.nfc_config_saved))
@@ -378,6 +424,13 @@ class EnrollmentActivity : BaseNfcActivity() {
             return
         }
 
+        Log.d(TAG, "┌─── handleNfcTag() BAC DATA ────")
+        Log.d(TAG, "│ CCCD:      '${bacData.cccdNumber}'")
+        Log.d(TAG, "│ DOB:       '${bacData.dateOfBirth}' (YYMMDD)")
+        Log.d(TAG, "│ Expiry:    '${bacData.expiryDate}' (YYMMDD)")
+        Log.d(TAG, "│ DocNumber: '${bacData.cccdNumber.take(9)}' (first 9)")
+        Log.d(TAG, "└─────────────────────────────────")
+
         // Show reading state
         binding.tvNfcStatus.text = getString(R.string.enrollment_nfc_reading)
         binding.progressNfcRead.visibility = View.VISIBLE
@@ -393,17 +446,33 @@ class EnrollmentActivity : BaseNfcActivity() {
                     )
                 }
 
-                Log.d(TAG, "NFC read success: ${chipData.fullName}")
+                Log.d(TAG, "┌─── NFC READ SUCCESS ───────────")
+                Log.d(TAG, "│ FullName:   '${chipData.fullName}'")
+                Log.d(TAG, "│ CCCD:       '${chipData.cccdNumber}'")
+                Log.d(TAG, "│ DOB:        '${chipData.dateOfBirth}' (YYMMDD from chip)")
+                Log.d(TAG, "│ Gender:     '${chipData.gender}'")
+                Log.d(TAG, "│ Expiry:     '${chipData.expiryDate}'")
+                Log.d(TAG, "│ Nationality:'${chipData.nationality}'")
+                Log.d(TAG, "│ ChipSerial: '${chipData.chipSerial}'")
+                Log.d(TAG, "│ PA Verified: ${chipData.passiveAuthVerified}")
+                Log.d(TAG, "│ ChipHash:   '${chipData.chipDataHash}'")
+                Log.d(TAG, "└─────────────────────────────────")
                 binding.progressNfcRead.visibility = View.GONE
                 viewModel.onNfcChipRead(chipData)
             } catch (e: CccdNfcReader.NfcReadException) {
                 binding.progressNfcRead.visibility = View.GONE
                 binding.tvNfcStatus.text = getString(R.string.enrollment_nfc_waiting)
                 showSnackbar(e.message ?: getString(R.string.enrollment_nfc_error))
+            } catch (e: SecurityException) {
+                // Passive Authentication failed — chip data was tampered.
+                // Surface as a high-visibility warning; do NOT continue enrollment.
+                binding.progressNfcRead.visibility = View.GONE
+                binding.tvNfcStatus.text = getString(R.string.enrollment_nfc_waiting)
+                showSnackbar(e.message ?: "Cảnh báo: Phát hiện thẻ CCCD không hợp lệ!")
             } catch (e: Exception) {
                 binding.progressNfcRead.visibility = View.GONE
                 binding.tvNfcStatus.text = getString(R.string.enrollment_nfc_waiting)
-                showSnackbar("Loi doc NFC: ${e.message}")
+                showSnackbar("Lỗi đọc NFC: ${e.message}")
             }
         }
     }
@@ -426,7 +495,7 @@ class EnrollmentActivity : BaseNfcActivity() {
         binding.nfcDataRows.tvNfcRowExpiry.text = formatYymmdd(chipData.expiryDate)
         binding.nfcDataRows.tvNfcRowChipSerial.text = chipData.chipSerial
         binding.nfcDataRows.tvNfcRowPassiveAuth.text =
-            if (chipData.passiveAuthData != null) getString(R.string.nfc_result_passive_auth_ok)
+            if (chipData.passiveAuthVerified) getString(R.string.nfc_result_passive_auth_ok)
             else getString(R.string.nfc_result_passive_auth_none)
 
         // Show submit button
@@ -605,24 +674,73 @@ class EnrollmentActivity : BaseNfcActivity() {
     /** Convert dd/mm/yyyy → YYMMDD for BAC key */
     private fun displayToYymmdd(display: String): String {
         val parts = display.split("/")
-        if (parts.size != 3) return "000000"
+        if (parts.size != 3) {
+            Log.e(TAG, "displayToYymmdd FAILED: '$display' split into ${parts.size} parts (expected 3)")
+            return "000000"
+        }
         val dd = parts[0]
         val mm = parts[1]
         val yyyy = parts[2]
         val yy = if (yyyy.length == 4) yyyy.substring(2) else yyyy
-        return "$yy$mm$dd"
+        val result = "$yy$mm$dd"
+        Log.d(TAG, "displayToYymmdd: '$display' → dd='$dd' mm='$mm' yyyy='$yyyy' yy='$yy' → '$result'")
+        if (result.length != 6) {
+            Log.e(TAG, "displayToYymmdd BAD RESULT: '$result' (len=${result.length}, expected 6)")
+        }
+        return result
     }
 
     /** Convert YYMMDD → DD/MM/YYYY for display */
     private fun formatYymmdd(yymmdd: String): String {
-        if (yymmdd.length != 6) return yymmdd
+        if (yymmdd.length != 6) {
+            Log.e(TAG, "formatYymmdd SKIP: '$yymmdd' (len=${yymmdd.length}, expected 6)")
+            return yymmdd
+        }
         val yy = yymmdd.substring(0, 2).toIntOrNull() ?: return yymmdd
         val mm = yymmdd.substring(2, 4)
         val dd = yymmdd.substring(4, 6)
         val yyyy = if (yy > 50) "19$yy" else "20$yy"
-        return "$dd/$mm/$yyyy"
+        val result = "$dd/$mm/$yyyy"
+        Log.d(TAG, "formatYymmdd: '$yymmdd' → '$result'")
+        return result
     }
 
-    /** Get original 12-digit CCCD from stored BAC cccd (which is already 12 digits) */
-    private fun yymmddToCccd(cccd: String): String = cccd
+    // ── Date Auto-Formatter ────────────────────────────────
+
+    /**
+     * TextWatcher that auto-inserts '/' separators as user types digits.
+     * Turns raw digit input "13052004" into "13/05/2004".
+     */
+    private class DateTextWatcher(
+        private val editText: com.google.android.material.textfield.TextInputEditText
+    ) : TextWatcher {
+        private var isFormatting = false
+
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+        override fun afterTextChanged(s: Editable?) {
+            if (isFormatting || s == null) return
+            isFormatting = true
+
+            // Strip everything except digits
+            val digits = s.toString().replace(Regex("[^0-9]"), "")
+
+            // Rebuild with slashes: dd/mm/yyyy
+            val formatted = buildString {
+                for (i in digits.indices) {
+                    if (i == 2 || i == 4) append('/')
+                    if (length >= 10) break  // dd/mm/yyyy = 10 chars max
+                    append(digits[i])
+                }
+            }
+
+            if (formatted != s.toString()) {
+                editText.setText(formatted)
+                editText.setSelection(formatted.length)
+            }
+
+            isFormatting = false
+        }
+    }
 }

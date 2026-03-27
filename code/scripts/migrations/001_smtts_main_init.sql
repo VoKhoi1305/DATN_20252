@@ -122,7 +122,7 @@ CREATE TABLE subjects (
   user_account_id  UUID           UNIQUE REFERENCES users(id) ON DELETE RESTRICT,
   full_name        VARCHAR(200)   NOT NULL,
   cccd_encrypted   VARCHAR(500)   NOT NULL,
-  cccd_hash        VARCHAR(64)    NOT NULL UNIQUE,
+  cccd_hash        VARCHAR(64)    NOT NULL,
   date_of_birth    DATE           NOT NULL,
   gender           gender_type    NOT NULL,
   ethnicity        VARCHAR(50),
@@ -519,7 +519,7 @@ CREATE INDEX idx_users_status ON users(status) WHERE deleted_at IS NULL;
 -- subjects
 CREATE INDEX idx_subjects_area       ON subjects(area_id)       WHERE deleted_at IS NULL;
 CREATE INDEX idx_subjects_status     ON subjects(status)        WHERE deleted_at IS NULL;
-CREATE INDEX idx_subjects_cccd_hash  ON subjects(cccd_hash)     WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX UQ_subjects_cccd_hash_active ON subjects(cccd_hash) WHERE deleted_at IS NULL;
 CREATE INDEX idx_subjects_code       ON subjects(code)          WHERE deleted_at IS NULL;
 CREATE INDEX idx_subjects_full_name  ON subjects USING GIN(to_tsvector('simple', full_name));
 CREATE INDEX idx_subjects_created_by ON subjects(created_by_id);

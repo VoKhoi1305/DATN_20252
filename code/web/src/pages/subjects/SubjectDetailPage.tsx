@@ -29,6 +29,7 @@ import {
   fetchSubjectDocuments,
   uploadSubjectDocument,
   deleteSubjectDocument,
+  deleteSubject,
   assignScenario,
   unassignScenario,
   fetchScenarioOptions,
@@ -59,6 +60,7 @@ const STATUS_BADGE: Record<string, { variant: 'pending' | 'info' | 'processing' 
 };
 
 const CAN_EDIT_ROLES = ['IT_ADMIN', 'LANH_DAO', 'CAN_BO_QUAN_LY', 'CAN_BO_CO_SO'];
+const CAN_DELETE_ROLES = ['IT_ADMIN', 'LANH_DAO'];
 const VIEWER_ROLE = 'VIEWER';
 
 const TAB_KEYS = ['info', 'scenario', 'timeline', 'documents', 'devices', 'enrollment'] as const;
@@ -813,6 +815,7 @@ function SubjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { showToast } = useToast();
 
   const user = getUser();
   const userRole = user?.role ?? VIEWER_ROLE;
@@ -835,6 +838,8 @@ function SubjectDetailPage() {
   const [detail, setDetail] = useState<SubjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // --- Fetch detail ---
   const loadDetail = useCallback(async () => {
@@ -871,8 +876,26 @@ function SubjectDetailPage() {
       : MSG.detailDocTitle;
   }, [detail]);
 
+  // --- Delete handler ---
+  const handleDelete = useCallback(async () => {
+    if (!id || !detail) return;
+    setIsDeleting(true);
+    try {
+      await deleteSubject(id);
+      setDeleteDialogOpen(false);
+      navigate('/ho-so', { replace: true });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message ?? 'Không thể xóa hồ sơ. Vui lòng thử lại.';
+      showToast(msg, 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [id, detail, navigate]);
+
   // --- Permission checks ---
   const canEdit = CAN_EDIT_ROLES.includes(userRole) && detail?.status !== 'ENDED';
+  const canDelete = CAN_DELETE_ROLES.includes(userRole);
 
   // --- Loading state ---
   if (loading) {
@@ -916,6 +939,51 @@ function SubjectDetailPage() {
 
   return (
     <>
+      {/* Delete confirmation dialog */}
+      {deleteDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => !isDeleting && setDeleteDialogOpen(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 size={18} className="text-red-600" />
+              </div>
+              <h3 className="text-[15px] font-semibold text-zinc-900">Xóa hồ sơ</h3>
+            </div>
+            <p className="text-[13px] text-zinc-600 mb-1">
+              Bạn có chắc muốn xóa hồ sơ{' '}
+              <strong className="text-zinc-900">{detail.full_name}</strong>?
+            </p>
+            <p className="text-[12px] text-zinc-400 mb-5">
+              Hồ sơ sẽ bị ẩn khỏi hệ thống. Số CCCD này có thể được đăng ký lại sau khi xóa.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={isDeleting}
+              >
+                Hủy
+              </Button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded text-[13px] font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Trash2 size={13} />
+                {isDeleting ? 'Đang xóa…' : 'Xóa hồ sơ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <PageHeader
         breadcrumbs={[
@@ -926,16 +994,29 @@ function SubjectDetailPage() {
         title={detail.ma_ho_so}
         subtitle={detail.full_name}
         actions={
-          canEdit ? (
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={<Pencil size={14} />}
-              onClick={() => navigate(`/ho-so/${id}/chinh-sua`)}
-            >
-              {MSG.editBtn}
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Pencil size={14} />}
+                onClick={() => navigate(`/ho-so/${id}/chinh-sua`)}
+              >
+                {MSG.editBtn}
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Trash2 size={14} />}
+                onClick={() => setDeleteDialogOpen(true)}
+                className="border-red-300 text-red-600 hover:bg-red-50"
+              >
+                Xóa hồ sơ
+              </Button>
+            )}
+          </div>
         }
       />
 

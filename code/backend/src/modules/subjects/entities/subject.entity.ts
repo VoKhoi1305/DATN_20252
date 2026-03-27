@@ -7,6 +7,7 @@ import {
   DeleteDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Area } from '../../areas/entities/area.entity';
 
@@ -31,6 +32,17 @@ export enum Gender {
   FEMALE = 'FEMALE',
 }
 
+/**
+ * Partial unique index: chỉ enforce unique trên cccd_hash khi hồ sơ CHƯA bị xóa.
+ * Hồ sơ đã soft-delete (deleted_at IS NOT NULL) KHÔNG bị tính vào ràng buộc này,
+ * cho phép tạo lại hồ sơ với cùng số CCCD sau khi xóa hồ sơ cũ.
+ *
+ * DB: xem migration 009_fix_cccd_hash_partial_unique.sql
+ */
+@Index('UQ_subjects_cccd_hash_active', ['cccdHash'], {
+  where: '"deleted_at" IS NULL',
+  unique: true,
+})
 @Entity('subjects')
 export class Subject {
   @PrimaryGeneratedColumn('uuid')
@@ -48,7 +60,10 @@ export class Subject {
   @Column({ name: 'cccd_encrypted', type: 'varchar', length: 500 })
   cccdEncrypted!: string;
 
-  @Column({ name: 'cccd_hash', type: 'varchar', length: 64, unique: true })
+  // unique: true đã được LOẠI BỎ khỏi đây.
+  // Uniqueness được enforce bởi partial index UQ_subjects_cccd_hash_active (xem @Index trên class)
+  // để hồ sơ đã xóa không chặn việc đăng ký lại cùng số CCCD.
+  @Column({ name: 'cccd_hash', type: 'varchar', length: 64 })
   cccdHash!: string;
 
   @Column({ name: 'date_of_birth', type: 'date' })

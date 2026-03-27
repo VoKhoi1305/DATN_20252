@@ -88,6 +88,14 @@ export class SubjectsController {
     return this.subjectsService.update(id, dto, userId);
   }
 
+  @Delete(':id')
+  async deleteSubject(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+  ) {
+    return this.subjectsService.deleteSubject(id, userId);
+  }
+
   @Get(':id/timeline')
   async getTimeline(
     @Param('id') id: string,

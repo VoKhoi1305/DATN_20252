@@ -407,7 +407,7 @@ export class SubjectsService {
     const cccdHash = createHash('sha256').update(dto.cccd).digest('hex');
     const existing = await this.subjectRepo.findOne({
       where: { cccdHash },
-      withDeleted: true,
+      // withDeleted: false (default) — cho phép tái sử dụng CCCD của hồ sơ đã bị xóa
     });
     if (existing) {
       throw new ConflictException('Số CCCD đã tồn tại trong hệ thống.');
@@ -908,6 +908,30 @@ export class SubjectsService {
     }
 
     return { success: true };
+  }
+
+  // =========================================================================
+  // Delete Subject (soft-delete)
+  // =========================================================================
+
+  async deleteSubject(id: string, userId: string) {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    // Chỉ IT_ADMIN và LANH_DAO mới có quyền xóa hồ sơ
+    const allowedRoles = [UserRole.IT_ADMIN, UserRole.LANH_DAO];
+    if (!allowedRoles.includes(user.role)) {
+      throw new ForbiddenException('Bạn không có quyền xóa hồ sơ.');
+    }
+
+    const subject = await this.subjectRepo.findOneBy({ id });
+    if (!subject) throw new NotFoundException('Không tìm thấy hồ sơ.');
+
+    // Soft-delete: cập nhật deleted_at, không xóa vật lý
+    // CCCD hash sẽ KHÔNG được tính vào kiểm tra trùng lặp khi tạo mới
+    await this.subjectRepo.softDelete(id);
+
+    return { success: true, message: 'Đã xóa hồ sơ thành công.' };
   }
 
   // =========================================================================

@@ -242,7 +242,8 @@
                                 android:id="@+id/etNfcDob"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="date"
+                                android:inputType="number"
+                                android:digits="0123456789/"
                                 android:maxLength="10" />
                         </com.google.android.material.textfield.TextInputLayout>
 
@@ -257,7 +258,8 @@
                                 android:id="@+id/etNfcExpiry"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="date"
+                                android:inputType="number"
+                                android:digits="0123456789/"
                                 android:maxLength="10" />
                         </com.google.android.material.textfield.TextInputLayout>
 
@@ -318,6 +320,17 @@
                         android:indeterminate="true"
                         android:indeterminateTint="@color/smtts_red_700"
                         android:visibility="gone" />
+
+                    <!-- Nút sửa thông tin BAC nếu nhập sai -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEditNfcConfig"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:text="@string/enrollment_nfc_edit_config"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
                 </LinearLayout>
 
                 <!-- NFC Read Result Card -->

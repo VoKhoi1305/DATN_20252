@@ -86,6 +86,7 @@
     <string name="enrollment_nfc_error">Không thể đọc chip CCCD. Vui lòng thử lại.</string>
     <string name="enrollment_nfc_submit_btn">Gửi dữ liệu NFC</string>
     <string name="enrollment_nfc_save_config">Lưu &amp; Bắt đầu quét</string>
+    <string name="enrollment_nfc_edit_config">Sửa thông tin thẻ</string>
 
     <!-- Step 2: Face -->
     <string name="enrollment_face_title">Chụp ảnh khuôn mặt</string>

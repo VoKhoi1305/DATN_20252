@@ -12,7 +12,6 @@ import { GeofencesModule } from './modules/geofences/geofences.module';
 import { EventsModule } from './modules/events/events.module';
 import { AlertsModule } from './modules/alerts/alerts.module';
 import { CasesModule } from './modules/cases/cases.module';
-import { SeedModule } from './modules/seed/seed.module';
 import { databaseConfigFactory } from './config/database.config';
 import { biometricDatabaseConfigFactory } from './config/biometric-database.config';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
@@ -55,7 +54,6 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     AlertsModule,
     CasesModule,
     EnrollmentModule,
-    SeedModule,
   ],
   providers: [
     {

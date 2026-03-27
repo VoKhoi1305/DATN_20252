@@ -75,6 +75,12 @@ export function createSubject(payload: CreateSubjectPayload) {
   return api.post<CreateSubjectResponse>('/subjects', payload);
 }
 
+// --- SCR-024: Delete ---
+
+export function deleteSubject(id: string) {
+  return api.delete(`/subjects/${id}`);
+}
+
 // --- SCR-023: Update ---
 
 export function updateSubject(id: string, payload: UpdateSubjectPayload) {
