@@ -5,37 +5,32 @@ import android.nfc.TagLostException
 import android.nfc.tech.IsoDep
 import android.util.Base64
 import android.util.Log
-import net.sf.scuba.smartcards.CardService
 import net.sf.scuba.smartcards.CardServiceException
+import net.sf.scuba.smartcards.IsoDepCardService
 import org.jmrtd.BACKey
-import org.jmrtd.PACEKeySpec
 import org.jmrtd.PassportService
-import org.jmrtd.lds.CardAccessFile
-import org.jmrtd.lds.PACEInfo
 import org.jmrtd.lds.SODFile
 import org.jmrtd.lds.icao.DG1File
+import org.jmrtd.lds.icao.DG2File
 import org.jmrtd.lds.icao.MRZInfo
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.security.MessageDigest
 
 /**
  * Vietnamese CCCD NFC Chip Reader — JMRTD / ICAO 9303 implementation.
  *
- * ═══════════════════════════════════════════════════════════════════════
- * Reading flow (optimised — EF_DG2/EF_DG13 intentionally SKIPPED):
+ * Reading flow:
+ *   1. BAC Authentication (3DES mutual auth using MRZ data)
+ *   2. Read EF_DG1 → buffer raw bytes + parse MRZ personal data
+ *   3. Read EF_SOD → Document Security Object (digital signature)
+ *   4. Passive Auth → compare hash(dg1Raw) vs SOD.dataGroupHashes[1]
  *
- *   1. Mutual Auth  → PACE (ICAO 9303 preferred) with BAC fallback
- *   2. Read EF_DG1  → buffer raw bytes + parse MRZ personal data
- *   3. Read EF_SOD  → Document Security Object (digital signature)
- *   4. Passive Auth → compare SHA-256(dg1Raw) vs SOD.dataGroupHashes[1]
- *
- * FaceID (EF_DG2) is handled by a separate dedicated module — do NOT read it here.
- * ═══════════════════════════════════════════════════════════════════════
- *
- * Prerequisites:
- *   - BouncyCastleProvider must be registered at Security position 1
- *     BEFORE this class is used.  See EnrollmentActivity.onCreate().
+ * Key fixes from test app (E:\phu\testCCCDapp):
+ *   - Uses IsoDepCardService(isoDep) directly (not CardService.getInstance)
+ *   - Calls sendSelectApplet(false) before doBAC()
+ *   - BAC-only auth (no PACE — unstable on Vietnamese CCCD)
  */
 class CccdNfcReader {
 
@@ -45,12 +40,6 @@ class CccdNfcReader {
 
     // ── Data model ────────────────────────────────────────────────────────────
 
-    /**
-     * Identity and integrity data extracted from the CCCD NFC chip.
-     *
-     * NOTE: facePhoto is intentionally absent — face recognition is a
-     * separate enrollment step and does not require chip data.
-     */
     data class CccdChipData(
         val fullName: String,
         val cccdNumber: String,
@@ -65,7 +54,13 @@ class CccdNfcReader {
         /** Base64-encoded SOD — forwarded to server for full chain-of-trust PA */
         val passiveAuthData: String?,
         /** True when client-side DG1 hash matched the SOD-sealed value */
-        val passiveAuthVerified: Boolean
+        val passiveAuthVerified: Boolean,
+        /**
+         * Base64-encoded face photo from CCCD chip DG2.
+         * May be JPEG or JPEG2000 format — server handles decoding.
+         * Null if DG2 reading failed (timeout, unsupported).
+         */
+        val dg2FaceImage: String? = null
     )
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -88,53 +83,72 @@ class CccdNfcReader {
         expiryDate: String
     ): CccdChipData {
         val isoDep = IsoDep.get(tag)
-            ?: throw NfcReadException("Thiết bị không hỗ trợ đọc NFC cho thẻ này.")
+            ?: throw NfcReadException("Thiet bi khong ho tro doc NFC cho the nay.")
 
         isoDep.timeout = 12_000 // 12 s — allow for slow chips
         val chipSerial = tag.id?.let { bytesToHex(it) } ?: "unknown"
-        val docNumber = cccdNumber
 
         Log.d(TAG, "NFC chip detected — serial: $chipSerial")
-        Log.d(TAG, "┌─── BAC/PACE KEY INPUT ─────────")
-        Log.d(TAG, "│ cccdNumber:  '$cccdNumber' (len=${cccdNumber.length})")
-        Log.d(TAG, "│ docNumber:   '$docNumber' (first 9)")
-        Log.d(TAG, "│ dateOfBirth: '$dateOfBirth' (len=${dateOfBirth.length})")
-        Log.d(TAG, "│ expiryDate:  '$expiryDate' (len=${expiryDate.length})")
-        Log.d(TAG, "└─────────────────────────────────")
+        Log.d(TAG, "BAC KEY: cccd='$cccdNumber', docNum9='${cccdNumber.take(9)}', dob='$dateOfBirth', exp='$expiryDate'")
 
+        var ps: PassportService? = null
         try {
             isoDep.connect()
 
-            // ── Step 1: Mutual Authentication ─────────────────────────────────
-            // Try PACE first. If PACE fails (corrupts NFC session), reconnect
-            // IsoDep and create a fresh PassportService for BAC fallback.
-            val passportService = authenticateChip(
-                isoDep, docNumber, dateOfBirth, expiryDate
+            // ── Step 1: Create PassportService using IsoDepCardService ────────
+            // CRITICAL FIX: Use IsoDepCardService(isoDep) directly.
+            // CardService.getInstance(isoDep) uses ServiceLoader which fails on Android.
+            val cardService = IsoDepCardService(isoDep)
+            ps = PassportService(
+                cardService,
+                PassportService.NORMAL_MAX_TRANCEIVE_LENGTH, // 256
+                PassportService.DEFAULT_MAX_BLOCKSIZE,       // 224
+                false,   // CCCD has no master file
+                false
             )
+            ps.open()
 
-            // ── Step 2: Read EF_DG1 (MRZ / personal data) ────────────────────
+            // ── Step 2: SELECT MRTD Application ──────────────────────────────
+            // CRITICAL FIX: Must call sendSelectApplet BEFORE doBAC.
+            // Without this, chip returns SW=6D00 (INS not supported).
+            ps.sendSelectApplet(false)
+
+            // ── Step 3: BAC Authentication ────────────────────────────────────
+         //   val docNumber = cccdNumber.take(9).padEnd(9, '<')
+            val docNumber = cccdNumber.takeLast(9).padEnd(9, '<')
+            val bacKey = BACKey(docNumber, dateOfBirth, expiryDate)
+
+            Log.d(TAG, "Attempting BAC with docNumber='$docNumber'...")
+            try {
+                ps.doBAC(bacKey)
+                Log.d(TAG, "BAC OK")
+            } catch (bacEx: Exception) {
+                val sw = if (bacEx is CardServiceException)
+                    Integer.toHexString(bacEx.sw).uppercase() else "?"
+                Log.e(TAG, "BAC failed (SW=$sw)", bacEx)
+                throw NfcReadException(
+                    "Thong tin khong khop. Vui long kiem tra lai so CCCD, ngay sinh " +
+                    "va ngay het han the roi thu lai."
+                )
+            }
+
+            // ── Step 4: Read EF_DG1 (MRZ / personal data) ────────────────────
             Log.d(TAG, "Reading EF_DG1...")
             val dg1RawBytes: ByteArray =
-                passportService.getInputStream(PassportService.EF_DG1).readBytes()
+                ps.getInputStream(PassportService.EF_DG1).readBytes()
             val dg1File = DG1File(ByteArrayInputStream(dg1RawBytes))
             val mrzInfo: MRZInfo = dg1File.mrzInfo
 
-            Log.d(TAG, "┌─── DG1 MRZ PARSED DATA ────────")
-            Log.d(TAG, "│ documentNumber: '${mrzInfo.documentNumber}'")
-            Log.d(TAG, "│ primaryId:      '${mrzInfo.primaryIdentifier}'")
-            Log.d(TAG, "│ secondaryId:    '${mrzInfo.secondaryIdentifier}'")
-            Log.d(TAG, "│ dateOfBirth:    '${mrzInfo.dateOfBirth}' (YYMMDD)")
-            Log.d(TAG, "│ dateOfExpiry:   '${mrzInfo.dateOfExpiry}' (YYMMDD)")
-            Log.d(TAG, "│ gender:         '${mrzInfo.gender}'")
-            Log.d(TAG, "│ nationality:    '${mrzInfo.nationality}'")
-            Log.d(TAG, "│ issuingState:   '${mrzInfo.issuingState}'")
-            Log.d(TAG, "└─────────────────────────────────")
+            Log.d(TAG, "DG1 parsed: docNum='${mrzInfo.documentNumber}', name='${mrzInfo.primaryIdentifier} ${mrzInfo.secondaryIdentifier}'")
 
-            // ── Step 3: Read EF_SOD (Document Security Object) ────────────────
+            // ── Step 5: Read EF_SOD (Document Security Object) ────────────────
             Log.d(TAG, "Reading EF_SOD...")
-            val sodFile: SODFile? = readSod(passportService)
+            val sodFile: SODFile? = readSod(ps)
 
-            // ── Step 4: Passive Authentication — DG1 hash verification ────────
+            // ── Step 6: Read EF_DG2 (face photo from chip) ───────────────────
+            val dg2FaceBase64 = readDg2FaceImage(ps)
+
+            // ── Step 7: Passive Authentication — DG1 hash verification ────────
             val paVerified = verifyDg1Hash(dg1RawBytes, sodFile)
 
             // ── Assemble result ───────────────────────────────────────────────
@@ -143,11 +157,11 @@ class CccdNfcReader {
                 MessageDigest.getInstance("SHA-256").digest(dg1RawBytes)
             )
 
-            try { passportService.close() } catch (_: Exception) {}
+            try { ps.close() } catch (_: Exception) {}
 
             return CccdChipData(
                 fullName          = buildFullName(mrzInfo),
-                cccdNumber        = mrzInfo.documentNumber.trimEnd('<').trim(),
+                cccdNumber        = cccdNumber,
                 dateOfBirth       = mrzInfo.dateOfBirth,
                 gender            = mrzInfo.gender.toString(),
                 expiryDate        = mrzInfo.dateOfExpiry,
@@ -155,32 +169,31 @@ class CccdNfcReader {
                 chipDataHash      = chipDataHash,
                 chipSerial        = chipSerial,
                 passiveAuthData   = sodBase64,
-                passiveAuthVerified = paVerified
+                passiveAuthVerified = paVerified,
+                dg2FaceImage      = dg2FaceBase64
             )
 
         } catch (e: TagLostException) {
             Log.w(TAG, "Tag lost mid-read", e)
             throw NfcReadException(
-                "Mất kết nối thẻ! Vui lòng giữ thẻ ổn định trên điện thoại và thử lại."
+                "Mat ket noi the! Vui long giu the on dinh tren dien thoai va thu lai."
             )
         } catch (e: IOException) {
             Log.w(TAG, "IO error reading chip", e)
             throw NfcReadException(
-                "Lỗi kết nối NFC. Hãy giữ thẻ ổn định và không di chuyển trong lúc đọc."
+                "Loi ket noi NFC. Hay giu the on dinh va khong di chuyen trong luc doc."
             )
         } catch (e: CardServiceException) {
-            Log.e(TAG, "Card service error — likely BAC key mismatch", e)
+            Log.e(TAG, "Card service error", e)
             throw NfcReadException(
-                "Thông tin không khớp. Vui lòng kiểm tra lại số CCCD, ngày sinh " +
-                "và ngày hết hạn thẻ rồi thử lại."
+                "Thong tin khong khop. Vui long kiem tra lai so CCCD, ngay sinh " +
+                "va ngay het han the roi thu lai."
             )
         } catch (e: SecurityException) {
-            // PA failure (fake card) is re-thrown intact.
-            // "Tag is out of date" SecurityException is wrapped as NfcReadException.
             if (e.message?.contains("out of date") == true) {
                 Log.w(TAG, "Tag out of date — NFC session expired", e)
                 throw NfcReadException(
-                    "Kết nối thẻ bị hết hạn. Vui lòng nhấc thẻ ra và đặt lại trên điện thoại."
+                    "Ket noi the bi het han. Vui long nhac the ra va dat lai tren dien thoai."
                 )
             }
             throw e
@@ -188,8 +201,9 @@ class CccdNfcReader {
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Unexpected NFC error", e)
-            throw NfcReadException("Không thể đọc chip CCCD: ${e.message}")
+            throw NfcReadException("Khong the doc chip CCCD: ${e.message}")
         } finally {
+            try { ps?.close() } catch (_: Exception) {}
             try { isoDep.close() } catch (_: Exception) {}
         }
     }
@@ -197,84 +211,48 @@ class CccdNfcReader {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
-     * Create and open a fresh PassportService from an already-connected IsoDep.
-     */
-    private fun openPassportService(isoDep: IsoDep): PassportService {
-        val cardService = CardService.getInstance(isoDep)
-        cardService.open()
-        val ps = PassportService(
-            cardService,
-            PassportService.NORMAL_MAX_TRANCEIVE_LENGTH,
-            PassportService.DEFAULT_MAX_BLOCKSIZE,
-            false,
-            false
-        )
-        ps.open()
-        return ps
-    }
-
-    /**
-     * Authenticate the chip: PACE → reconnect → BAC fallback.
+     * Read DG2 (face photo) from CCCD chip.
+     * DG2 contains the portrait photo stored during CCCD issuance.
+     * This photo serves as the ground-truth reference for face verification.
      *
-     * When PACE fails, the NFC session is often corrupted ("Tag is out of date").
-     * This method handles that by closing/reconnecting IsoDep and creating a
-     * fresh PassportService before attempting BAC.
-     *
-     * @return The authenticated PassportService ready for reading DG1/SOD.
+     * Returns Base64-encoded image bytes, or null if reading fails.
+     * The image format may be JPEG or JPEG2000 — server-side OpenCV handles both.
      */
-    private fun authenticateChip(
-        isoDep: IsoDep,
-        docNumber: String,
-        dateOfBirth: String,
-        expiryDate: String
-    ): PassportService {
-        val bacKey = BACKey(docNumber, dateOfBirth, expiryDate)
+    private fun readDg2FaceImage(service: PassportService): String? = try {
+        Log.d(TAG, "Reading EF_DG2 (face photo)...")
+        val dg2RawBytes = service.getInputStream(PassportService.EF_DG2).readBytes()
+        val dg2File = DG2File(ByteArrayInputStream(dg2RawBytes))
 
-        // ── Attempt 1: PACE on fresh connection ──
-        var service = openPassportService(isoDep)
-        try {
-            val cardAccessStream = service.getInputStream(PassportService.EF_CARD_ACCESS)
-            val cardAccessFile = CardAccessFile(cardAccessStream)
-            val paceInfo = cardAccessFile.securityInfos
-                .filterIsInstance<PACEInfo>()
-                .firstOrNull()
-
-            if (paceInfo != null) {
-                Log.d(TAG, "PACE info found — OID: ${paceInfo.objectIdentifier}, attempting PACE...")
-                val paceKey = PACEKeySpec.createMRZKey(bacKey)
-                val paramSpec = PACEInfo.toParameterSpec(paceInfo.parameterId)
-                service.doPACE(paceKey, paceInfo.objectIdentifier, paramSpec)
-                Log.d(TAG, "✓ PACE OK")
-                return service
+        val faceInfos = dg2File.faceInfos
+        if (faceInfos.isNullOrEmpty()) {
+            Log.w(TAG, "DG2: No face info entries found")
+            null
+        } else {
+            val faceImageInfos = faceInfos[0].faceImageInfos
+            if (faceImageInfos.isNullOrEmpty()) {
+                Log.w(TAG, "DG2: No face image entries found")
+                null
             } else {
-                Log.d(TAG, "No PACEInfo in CardAccess, skipping PACE")
+                val imageInfo = faceImageInfos[0]
+                val baos = ByteArrayOutputStream()
+                imageInfo.imageInputStream.use { input ->
+                    val buf = ByteArray(4096)
+                    var n: Int
+                    while (input.read(buf).also { n = it } != -1) {
+                        baos.write(buf, 0, n)
+                    }
+                }
+                val imageBytes = baos.toByteArray()
+                Log.d(TAG, "DG2 face image read OK: ${imageBytes.size} bytes, mimeType=${imageInfo.mimeType}")
+                Base64.encodeToString(imageBytes, Base64.NO_WRAP)
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "PACE failed (${e.javaClass.simpleName}: ${e.message})")
-            Log.d(TAG, "Reconnecting IsoDep for BAC fallback...")
-
-            // PACE failure corrupts the NFC session on many devices.
-            // Close everything and reconnect before trying BAC.
-            try { service.close() } catch (_: Exception) {}
-            try { isoDep.close() } catch (_: Exception) {}
-
-            isoDep.connect()
-            service = openPassportService(isoDep)
-            Log.d(TAG, "IsoDep reconnected OK")
         }
-
-        // ── Attempt 2: BAC (on fresh or reconnected session) ──
-        Log.d(TAG, "Attempting BAC...")
-        service.doBAC(bacKey)
-        Log.d(TAG, "✓ BAC OK")
-        return service
+    } catch (e: Exception) {
+        // DG2 reading is optional — don't block enrollment if it fails
+        Log.w(TAG, "DG2 read failed (will use selfie instead): ${e.message}")
+        null
     }
 
-    /**
-     * Read EF_SOD (Document Security Object).
-     * Returns null if the file cannot be read — Passive Authentication will be
-     * skipped gracefully rather than blocking the entire read.
-     */
     private fun readSod(service: PassportService): SODFile? = try {
         val sodStream = service.getInputStream(PassportService.EF_SOD)
         SODFile(sodStream).also { sod ->
@@ -285,21 +263,6 @@ class CccdNfcReader {
         null
     }
 
-    /**
-     * Passive Authentication — verify the DG1 hash against the SOD-sealed value.
-     *
-     * Security model:
-     *   The SOD is signed by Vietnam's CSCA (Country Signing CA) private key.
-     *   It contains the hash of each Data Group as computed at card issuance time.
-     *   By recomputing the hash of the raw DG1 bytes we just read from the chip
-     *   and comparing it to sodFile.dataGroupHashes[1], we detect any post-issuance
-     *   modification of the personal data without needing the CSCA certificate
-     *   (full chain verification requires the CSCA cert and is done server-side).
-     *
-     * @return true  → hash matched; client-side PA passed.
-     *         false → SOD unavailable; PA skipped (not an error).
-     * @throws SecurityException if computed hash ≠ stored hash (fake/cloned card).
-     */
     private fun verifyDg1Hash(dg1RawBytes: ByteArray, sodFile: SODFile?): Boolean {
         if (sodFile == null) {
             Log.w(TAG, "PA skipped: SOD unavailable")
@@ -312,7 +275,6 @@ class CccdNfcReader {
                 return false
             }
 
-        // The SOD declares which algorithm was used to hash each DG at issuance.
         val algorithm: String = sodFile.digestAlgorithm
         Log.d(TAG, "PA: computing DG1 hash with $algorithm (${dg1RawBytes.size} bytes)")
 
@@ -323,25 +285,21 @@ class CccdNfcReader {
                 TAG,
                 "PA FAILED — computed: ${bytesToHex(computedHash)} | stored: ${bytesToHex(storedHash)}"
             )
-            throw SecurityException("Thẻ giả mạo: Dữ liệu DG1 đã bị chỉnh sửa!")
+            throw SecurityException("The gia mao: Du lieu DG1 da bi chinh sua!")
         }
 
         Log.d(TAG, "PA PASSED — DG1 hash verified OK")
         return true
     }
 
-    /**
-     * Build a clean display name from MRZ primary/secondary identifiers.
-     * MRZ uses '<' as a filler/separator character.
-     */
     private fun buildFullName(mrzInfo: MRZInfo): String {
-        val secondary = mrzInfo.secondaryIdentifier.replace("<", " ").trim()
         val primary   = mrzInfo.primaryIdentifier.replace("<", " ").trim()
+        val secondary = mrzInfo.secondaryIdentifier.replace("<", " ").trim()
         return buildString {
-            if (secondary.isNotEmpty()) append(secondary)
-            if (primary.isNotEmpty()) {
+            if (primary.isNotEmpty()) append(primary)
+            if (secondary.isNotEmpty()) {
                 if (isNotEmpty()) append(" ")
-                append(primary)
+                append(secondary)
             }
         }.trim()
     }
@@ -351,6 +309,5 @@ class CccdNfcReader {
 
     // ── Exception ─────────────────────────────────────────────────────────────
 
-    /** Wraps all NFC/card read failures with a UI-safe Vietnamese message. */
     class NfcReadException(message: String) : Exception(message)
 }

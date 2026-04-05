@@ -3,6 +3,8 @@ package com.example.smtts.data.api
 import com.example.smtts.data.model.ActivateRequest
 import com.example.smtts.data.model.ActivateResponse
 import com.example.smtts.data.model.ApiResponse
+import com.example.smtts.data.model.ChangePasswordRequest
+import com.example.smtts.data.model.ChangePasswordResponse
 import com.example.smtts.data.model.LoginRequest
 import com.example.smtts.data.model.LoginResponse
 import com.example.smtts.data.model.RefreshRequest
@@ -33,4 +35,7 @@ interface AuthApi {
 
     @POST("auth/logout")
     suspend fun logout(@Body request: RefreshRequest): Response<ApiResponse<Unit>>
+
+    @POST("auth/change-password")
+    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<ApiResponse<ChangePasswordResponse>>
 }

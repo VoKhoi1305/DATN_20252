@@ -15,8 +15,18 @@ import com.example.smtts.data.api.ApiClient
 import com.example.smtts.data.local.TokenManager
 import com.example.smtts.data.model.RefreshRequest
 import com.example.smtts.nfc.CccdNfcReader
+import com.example.smtts.ui.checkin.CheckinActivity
 import com.example.smtts.ui.enrollment.EnrollmentActivity
+import com.example.smtts.ui.geofence.GeofenceActivity
+import com.example.smtts.ui.history.HistoryActivity
 import com.example.smtts.ui.login.LoginActivity
+import com.example.smtts.ui.notification.NotificationActivity
+import com.example.smtts.ui.profile.ProfileActivity
+import com.example.smtts.ui.request.RequestListActivity
+import com.example.smtts.ui.device.DeviceActivity
+import com.example.smtts.ui.document.DocumentActivity
+import com.example.smtts.ui.contact.ContactActivity
+import com.example.smtts.ui.settings.SettingsActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -232,7 +242,7 @@ class MainActivity : BaseNfcActivity() {
 
     private fun setupQuickActions() {
         findViewById<MaterialCardView>(R.id.cardCheckin).setOnClickListener {
-            showSnackbar(getString(R.string.dashboard_feature_coming_soon))
+            startActivity(Intent(this, CheckinActivity::class.java))
         }
 
         findViewById<MaterialCardView>(R.id.cardEnrollment).setOnClickListener {
@@ -240,11 +250,39 @@ class MainActivity : BaseNfcActivity() {
         }
 
         findViewById<MaterialCardView>(R.id.cardHistory).setOnClickListener {
-            showSnackbar(getString(R.string.dashboard_feature_coming_soon))
+            startActivity(Intent(this, HistoryActivity::class.java))
         }
 
         findViewById<MaterialCardView>(R.id.cardProfile).setOnClickListener {
-            showSnackbar(getString(R.string.dashboard_feature_coming_soon))
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
+
+        findViewById<MaterialCardView>(R.id.cardNotification).setOnClickListener {
+            startActivity(Intent(this, NotificationActivity::class.java))
+        }
+
+        findViewById<MaterialCardView>(R.id.cardRequest).setOnClickListener {
+            startActivity(Intent(this, RequestListActivity::class.java))
+        }
+
+        findViewById<MaterialCardView>(R.id.cardGeofence).setOnClickListener {
+            startActivity(Intent(this, GeofenceActivity::class.java))
+        }
+
+        findViewById<MaterialCardView>(R.id.cardDevice).setOnClickListener {
+            startActivity(Intent(this, DeviceActivity::class.java))
+        }
+
+        findViewById<MaterialCardView>(R.id.cardDocument).setOnClickListener {
+            startActivity(Intent(this, DocumentActivity::class.java))
+        }
+
+        findViewById<MaterialCardView>(R.id.cardContact).setOnClickListener {
+            startActivity(Intent(this, ContactActivity::class.java))
+        }
+
+        findViewById<MaterialCardView>(R.id.cardSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
     }
 

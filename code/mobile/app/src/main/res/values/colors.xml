@@ -24,6 +24,12 @@
     <!-- SMTTS Green palette -->
     <color name="smtts_green_700">#15803D</color>
 
+    <!-- SMTTS Amber palette -->
+    <color name="smtts_amber_600">#D97706</color>
+
+    <!-- SMTTS Blue palette -->
+    <color name="smtts_blue_600">#2563EB</color>
+
     <!-- Semantic aliases -->
     <color name="smtts_primary">@color/smtts_red_700</color>
     <color name="smtts_bg">@color/smtts_zinc_50</color>

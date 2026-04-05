@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingVertical="4dp">
+
+    <TextView
+        android:id="@+id/tvDocType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/smtts_zinc_900"
+        android:textSize="@dimen/text_base"
+        android:textStyle="bold"
+        tools:text="Quyết định quản lý" />
+
+    <TextView
+        android:id="@+id/tvDocNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/smtts_zinc_700"
+        android:textSize="@dimen/text_sm"
+        tools:text="Số: QĐ-123/2024" />
+
+    <TextView
+        android:id="@+id/tvDocDate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/smtts_zinc_500"
+        android:textSize="@dimen/text_sm"
+        tools:text="Ngày: 01/01/2025" />
+
+    <TextView
+        android:id="@+id/tvDocDuration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/smtts_zinc_500"
+        android:textSize="@dimen/text_sm"
+        tools:text="Thời hạn: 12 tháng" />
+</LinearLayout>

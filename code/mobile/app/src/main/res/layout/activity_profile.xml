@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/smtts_zinc_50"
+    tools:context=".ui.profile.ProfileActivity">
+
+    <!-- ═══ Header Bar ═══ -->
+    <LinearLayout
+        android:id="@+id/headerBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/smtts_red_700"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/spacing_sm"
+        android:paddingVertical="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/enrollment_back"
+            android:padding="6dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/white" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:text="@string/profile_title"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_lg"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- ═══ Loading ═══ -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerBar" />
+
+    <!-- ═══ Error ═══ -->
+    <LinearLayout
+        android:id="@+id/errorLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_xl"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerBar">
+
+        <TextView
+            android:id="@+id/tvErrorMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="@color/smtts_zinc_500"
+            android:textSize="@dimen/text_base" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRetry"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_md"
+            android:text="@string/profile_retry" />
+    </LinearLayout>
+
+    <!-- ═══ Content ═══ -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerBar">
+
+        <LinearLayout
+            android:id="@+id/contentLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/spacing_md"
+            android:visibility="gone">
+
+            <!-- ═══ Avatar + Name ═══ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingVertical="@dimen/spacing_md">
+
+                <FrameLayout
+                    android:layout_width="64dp"
+                    android:layout_height="64dp">
+
+                    <View
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="@drawable/bg_icon_circle_red" />
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/dashboard_profile"
+                        android:src="@drawable/ic_person"
+                        app:tint="@color/white" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/tvFullName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:textColor="@color/smtts_zinc_900"
+                    android:textSize="@dimen/text_lg"
+                    android:textStyle="bold"
+                    tools:text="Nguyễn Văn A" />
+
+                <TextView
+                    android:id="@+id/tvProfileCode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/smtts_zinc_500"
+                    android:textSize="@dimen/text_sm"
+                    tools:text="Mã hồ sơ: HS-2024-001" />
+            </LinearLayout>
+
+            <!-- ═══ Personal Info Section ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:text="@string/profile_section_personal"
+                        android:textColor="@color/smtts_red_700"
+                        android:textSize="@dimen/text_base"
+                        android:textStyle="bold" />
+
+                    <!-- CCCD -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_cccd"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvCccd"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        tools:text="012 345 ***89" />
+
+                    <!-- DOB -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_dob"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvDateOfBirth"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        tools:text="15/06/1990" />
+
+                    <!-- Gender -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_gender"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvGender"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        tools:text="Nam" />
+
+                    <!-- Address -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_address"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvAddress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        tools:text="123 Nguyễn Trãi, P. Thanh Xuân Trung" />
+
+                    <!-- Phone -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_phone"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvPhone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        tools:text="0912 345 678" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ Management Status Section ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:text="@string/profile_section_management"
+                        android:textColor="@color/smtts_red_700"
+                        android:textSize="@dimen/text_base"
+                        android:textStyle="bold" />
+
+                    <!-- Status -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_status"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        android:textStyle="bold"
+                        tools:text="Đang được quản lý" />
+
+                    <!-- Enrollment date -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_start_date"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvEnrollmentDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        tools:text="01/01/2025" />
+
+                    <!-- Scenario -->
+                    <LinearLayout
+                        android:id="@+id/scenarioSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/profile_label_scenario"
+                            android:textColor="@color/smtts_zinc_500"
+                            android:textSize="@dimen/text_sm" />
+                        <TextView
+                            android:id="@+id/tvScenarioName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/smtts_zinc_900"
+                            android:textSize="@dimen/text_base"
+                            android:textStyle="bold"
+                            tools:text="Quản lý thường xuyên" />
+                        <TextView
+                            android:id="@+id/tvScenarioDetail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:textColor="@color/smtts_zinc_700"
+                            android:textSize="@dimen/text_sm"
+                            tools:text="Điểm danh mỗi ngày, 06:00 - 09:00" />
+                    </LinearLayout>
+
+                    <!-- Compliance -->
+                    <LinearLayout
+                        android:id="@+id/complianceSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/profile_label_compliance"
+                            android:textColor="@color/smtts_zinc_500"
+                            android:textSize="@dimen/text_sm" />
+                        <ProgressBar
+                            android:id="@+id/complianceBar"
+                            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="8dp"
+                            android:layout_marginVertical="4dp"
+                            android:max="100"
+                            android:progressTint="@color/smtts_green_700" />
+                        <TextView
+                            android:id="@+id/tvComplianceRate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/smtts_zinc_900"
+                            android:textSize="@dimen/text_base"
+                            android:textStyle="bold"
+                            tools:text="82%" />
+                        <TextView
+                            android:id="@+id/tvComplianceLabel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:textColor="@color/smtts_zinc_500"
+                            android:textSize="@dimen/text_sm"
+                            tools:text="Tốt — tiếp tục giữ vững" />
+                    </LinearLayout>
+
+                    <!-- Area -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_label_area"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+                    <TextView
+                        android:id="@+id/tvAreaName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/smtts_zinc_900"
+                        android:textSize="@dimen/text_base"
+                        tools:text="Phường Thanh Xuân Trung" />
+
+                    <!-- Geofence link -->
+                    <TextView
+                        android:id="@+id/tvGeofenceLink"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:text="@string/profile_view_map"
+                        android:textColor="@color/smtts_red_700"
+                        android:textSize="@dimen/text_sm"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+
+                    <!-- Curfew -->
+                    <LinearLayout
+                        android:id="@+id/curfewSection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/profile_label_curfew"
+                            android:textColor="@color/smtts_zinc_500"
+                            android:textSize="@dimen/text_sm" />
+                        <TextView
+                            android:id="@+id/tvCurfew"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/smtts_red_700"
+                            android:textSize="@dimen/text_base"
+                            android:textStyle="bold"
+                            tools:text="Từ 22:00 đến 05:00" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ Family Section ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/familySection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:text="@string/profile_section_family"
+                        android:textColor="@color/smtts_red_700"
+                        android:textSize="@dimen/text_base"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/familyContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══ Legal Documents Section ═══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/legalSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/spacing_md"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_md">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="@dimen/spacing_sm"
+                        android:text="@string/profile_section_legal"
+                        android:textColor="@color/smtts_red_700"
+                        android:textSize="@dimen/text_base"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/legalContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

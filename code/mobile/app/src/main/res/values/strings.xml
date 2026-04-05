@@ -98,6 +98,7 @@
     <string name="enrollment_face_liveness">Liveness: %1$.0f%%</string>
     <string name="enrollment_face_retry">Chụp lại</string>
     <string name="enrollment_camera_permission_denied">Cần quyền camera để chụp ảnh khuôn mặt</string>
+    <string name="enrollment_dg2_face_enrolled">Ảnh chân dung từ CCCD đã được ghi nhận</string>
 
     <!-- Step 3: Submit -->
     <string name="enrollment_submit_title">Xác nhận &amp; Gửi duyệt</string>
@@ -136,6 +137,29 @@
     <string name="dashboard_logout_no">Hủy</string>
     <string name="dashboard_logging_out">Đang đăng xuất…</string>
     <string name="dashboard_feature_coming_soon">Chức năng đang phát triển</string>
+
+    <!-- ═══ Check-in Screen ═══ -->
+    <string name="checkin_title">Điểm danh</string>
+    <string name="checkin_step_nfc">Quét NFC</string>
+    <string name="checkin_step_face">Khuôn mặt</string>
+    <string name="checkin_nfc_waiting">Chạm thẻ CCCD vào điện thoại…</string>
+    <string name="checkin_nfc_instruction">Đặt mặt sau thẻ CCCD lên vùng NFC của điện thoại.\nGiữ thẻ ổn định cho đến khi đọc xong.</string>
+    <string name="checkin_nfc_reading">Đang đọc chip CCCD…</string>
+    <string name="checkin_nfc_verified">Xác minh NFC thành công</string>
+    <string name="checkin_next_face">Tiếp tục chụp khuôn mặt</string>
+    <string name="checkin_face_title">Chụp ảnh xác minh</string>
+    <string name="checkin_face_instruction">Nhìn thẳng vào camera, đảm bảo ánh sáng đầy đủ.\nẢnh sẽ được gửi lên server để xác minh danh tính.</string>
+    <string name="checkin_capture_face">Chụp &amp; Điểm danh</string>
+    <string name="checkin_processing">Đang xử lý…</string>
+    <string name="checkin_result_success">Điểm danh thành công!</string>
+    <string name="checkin_result_warning">Điểm danh có cảnh báo</string>
+    <string name="checkin_result_failed">Điểm danh thất bại</string>
+    <string name="checkin_back_home">Quay về trang chủ</string>
+    <string name="checkin_face_score">Khuôn mặt khớp: %1$.1f%%</string>
+    <string name="checkin_liveness_score">Liveness: %1$.1f%%</string>
+    <string name="checkin_nfc_ok">NFC xác minh thành công ✓</string>
+    <string name="checkin_device_mismatch">Cảnh báo: Thiết bị không khớp với thiết bị đã đăng ký</string>
+    <string name="checkin_no_bac_data">Chưa cài đặt thông tin CCCD.\nVui lòng cấu hình ở trang chủ trước khi điểm danh.</string>
 
     <!-- NFC Config Dialog -->
     <string name="nfc_config_title">Cài đặt thông tin CCCD</string>
@@ -176,4 +200,186 @@
 
     <!-- Footer -->
     <string name="footer_copyright">© 2026 SMTTS</string>
+
+    <!-- ═══ SA-05: Profile Screen ═══ -->
+    <string name="profile_title">THÔNG TIN CỦA TÔI</string>
+    <string name="profile_code_format">Mã hồ sơ: %1$s</string>
+    <string name="profile_section_personal">THÔNG TIN CÁ NHÂN</string>
+    <string name="profile_section_management">TÌNH TRẠNG QUẢN LÝ</string>
+    <string name="profile_section_family">GIA ĐÌNH</string>
+    <string name="profile_section_legal">GIẤY TỜ PHÁP LÝ</string>
+    <string name="profile_label_cccd">Số Căn cước</string>
+    <string name="profile_label_dob">Ngày sinh</string>
+    <string name="profile_label_gender">Giới tính</string>
+    <string name="profile_label_address">Địa chỉ hiện tại</string>
+    <string name="profile_label_phone">Số điện thoại</string>
+    <string name="profile_label_status">Trạng thái hiện tại</string>
+    <string name="profile_label_start_date">Ngày bắt đầu</string>
+    <string name="profile_label_scenario">Kịch bản áp dụng</string>
+    <string name="profile_label_compliance">Tỷ lệ chấp hành</string>
+    <string name="profile_label_area">Khu vực quản lý</string>
+    <string name="profile_label_curfew">Giới nghiêm</string>
+    <string name="profile_view_map">→ Xem bản đồ khu vực</string>
+    <string name="profile_retry">Thử lại</string>
+    <string name="profile_status_active">Đang được quản lý</string>
+    <string name="profile_status_enrolled">Đang hoàn thiện hồ sơ</string>
+    <string name="profile_status_suspended">Tạm dừng — liên hệ cán bộ</string>
+    <string name="profile_status_reintegrating">Đang tái hòa nhập</string>
+    <string name="profile_status_completed">Đã hoàn thành quản lý</string>
+    <string name="profile_freq_daily">Điểm danh mỗi ngày</string>
+    <string name="profile_freq_weekly">Điểm danh mỗi tuần</string>
+    <string name="profile_freq_biweekly">Điểm danh 2 tuần một lần</string>
+    <string name="profile_freq_monthly">Điểm danh mỗi tháng</string>
+    <string name="profile_freq_every_n_days">Điểm danh mỗi %1$d ngày</string>
+    <string name="profile_status_init">Khởi tạo</string>
+    <string name="profile_family_father">Bố</string>
+    <string name="profile_family_mother">Mẹ</string>
+    <string name="profile_family_spouse">Vợ/Chồng</string>
+    <string name="profile_family_dependents">người phụ thuộc</string>
+    <string name="profile_family_dependents_label">Người phụ thuộc</string>
+    <string name="profile_legal_decision">Quyết định quản lý</string>
+    <string name="profile_compliance_format">%1$.0f%%</string>
+    <string name="profile_compliance_very_good">Rất tốt</string>
+    <string name="profile_compliance_good">Tốt — tiếp tục giữ vững</string>
+    <string name="profile_compliance_improve">Cần cải thiện — cố gắng điểm danh đúng giờ</string>
+    <string name="profile_compliance_poor">Chưa tốt — hãy liên hệ cán bộ để hỗ trợ</string>
+    <string name="profile_curfew_format">Từ %1$s đến %2$s</string>
+    <string name="profile_doc_number_format">Số: %1$s</string>
+    <string name="profile_doc_duration_format">Thời hạn: %1$s</string>
+
+    <!-- ═══ SA-06: Geofence Screen ═══ -->
+    <string name="geofence_title">KHU VỰC CỦA BẠN</string>
+    <string name="geofence_area_label">Khu vực của bạn</string>
+    <string name="geofence_allowed_area">Bạn được phép ở trong khu vực sau:</string>
+    <string name="geofence_type_circle">Khu vực hình tròn, bán kính khoảng %1$s</string>
+    <string name="geofence_type_polygon">Khu vực theo ranh giới phường/quận</string>
+    <string name="geofence_distance_km">%1$.1fkm</string>
+    <string name="geofence_distance_m">%1$dm</string>
+    <string name="geofence_map_placeholder">Bản đồ sẽ hiển thị ở đây\n(Tích hợp Google Maps sau)</string>
+    <string name="geofence_info_note">Khi bạn điểm danh, hệ thống sẽ kiểm tra bạn có đang ở trong khu vực này không. Nếu bạn ở ngoài khu vực mà chưa được phép, cán bộ sẽ nhận được thông báo.</string>
+    <string name="geofence_curfew_label">Giới nghiêm</string>
+    <string name="geofence_curfew_format">Từ %1$s đến %2$s</string>
+    <string name="geofence_curfew_note">Bạn cần ở trong khu vực trong thời gian này</string>
+    <string name="geofence_not_assigned">Chưa có khu vực quản lý được gán</string>
+
+    <!-- ═══ SA-07: History Screen ═══ -->
+    <string name="history_title">LỊCH SỬ ĐIỂM DANH</string>
+    <string name="history_prev_month">Tháng trước</string>
+    <string name="history_next_month">Tháng sau</string>
+    <string name="history_count_success">Đã điểm danh (%1$d ngày)</string>
+    <string name="history_count_warning">Muộn (%1$d ngày)</string>
+    <string name="history_count_missed">Bỏ lỡ (%1$d ngày)</string>
+    <string name="history_detail_title">CHI TIẾT GẦN ĐÂY</string>
+    <string name="history_no_events">Không có dữ liệu điểm danh trong tháng này</string>
+    <string name="history_status_success">Đã điểm danh</string>
+    <string name="history_status_late">Muộn</string>
+    <string name="history_status_missed">Không điểm danh</string>
+    <string name="history_late">Muộn</string>
+    <string name="history_no_checkin">Không điểm danh</string>
+    <string name="history_in_geofence">Trong khu vực ✓</string>
+    <string name="history_out_geofence">Ngoài khu vực ✗</string>
+    <string name="history_face_match">Khuôn mặt khớp ✓</string>
+
+    <!-- ═══ SA-08: Notification Screen ═══ -->
+    <string name="notif_title">THÔNG BÁO</string>
+    <string name="notif_mark_all_read">Đọc tất cả</string>
+    <string name="notif_unread_count">%1$d thông báo chưa đọc</string>
+    <string name="notif_empty">Chưa có thông báo nào</string>
+
+    <!-- ═══ SA-09: Request Screen ═══ -->
+    <string name="request_title">YÊU CẦU CỦA TÔI</string>
+    <string name="request_create_new">+ GỬI YÊU CẦU MỚI</string>
+    <string name="request_create_title">GỬI YÊU CẦU</string>
+    <string name="request_empty">Chưa có yêu cầu nào</string>
+    <string name="request_section_pending">Đang chờ duyệt</string>
+    <string name="request_section_processed">Đã xử lý</string>
+    <string name="request_type_label">Loại yêu cầu</string>
+    <string name="request_type_travel">Xin đi xa</string>
+    <string name="request_type_postpone">Xin hoãn điểm danh</string>
+    <string name="request_type_change_device">Xin đổi thiết bị</string>
+    <string name="request_type_change_address">Xin thay đổi địa chỉ</string>
+    <string name="request_reason_label">Lý do</string>
+    <string name="request_destination_label">Bạn muốn đi đâu?</string>
+    <string name="request_date_from_label">Từ ngày (dd/mm/yyyy)</string>
+    <string name="request_date_to_label">Đến ngày (dd/mm/yyyy)</string>
+    <string name="request_postpone_date_label">Ngày muốn hoãn (dd/mm/yyyy)</string>
+    <string name="request_new_address_label">Địa chỉ mới</string>
+    <string name="request_info_note">Yêu cầu sẽ được gửi đến cán bộ phụ trách. Cán bộ sẽ xem xét và phản hồi trong vòng 24 giờ.</string>
+    <string name="request_submit_btn">GỬI YÊU CẦU</string>
+    <string name="request_submitting">Đang gửi…</string>
+    <string name="request_submit_success">Đã gửi yêu cầu thành công!</string>
+    <string name="request_sent_date">Gửi ngày: %1$s</string>
+    <string name="request_status_pending">Đang chờ</string>
+    <string name="request_status_approved">Đã duyệt ✓</string>
+    <string name="request_status_rejected">Từ chối</string>
+    <string name="request_review_note">Lý do: %1$s</string>
+    <string name="request_error_type_required">Vui lòng chọn loại yêu cầu</string>
+    <string name="request_error_reason_required">Vui lòng nhập lý do</string>
+    <string name="request_error_destination_required">Vui lòng nhập nơi đến</string>
+    <string name="request_error_date_required">Vui lòng nhập ngày</string>
+    <string name="request_error_address_required">Vui lòng nhập địa chỉ mới</string>
+    <string name="request_error_validation">Thông tin không hợp lệ. Vui lòng kiểm tra lại.</string>
+
+    <!-- Dashboard - new cards -->
+    <string name="dashboard_notification">Thông báo</string>
+    <string name="dashboard_notification_desc">Xem thông báo từ hệ thống</string>
+    <string name="dashboard_request">Yêu cầu</string>
+    <string name="dashboard_request_desc">Gửi yêu cầu cho cán bộ</string>
+    <string name="dashboard_geofence">Khu vực\nquản lý</string>
+    <string name="dashboard_geofence_desc">Xem khu vực của bạn</string>
+    <string name="dashboard_device">Thiết bị</string>
+    <string name="dashboard_device_desc">Quản lý thiết bị của bạn</string>
+    <string name="dashboard_document">Tài liệu</string>
+    <string name="dashboard_document_desc">Xem tài liệu hồ sơ</string>
+    <string name="dashboard_contact">Liên hệ\ncán bộ</string>
+    <string name="dashboard_contact_desc">Thông tin cán bộ phụ trách</string>
+    <string name="dashboard_settings">Cài đặt</string>
+    <string name="dashboard_settings_desc">Bảo mật &amp; cài đặt</string>
+
+    <!-- ═══ SA-10: Device Screen ═══ -->
+    <string name="device_title">THIẾT BỊ CỦA TÔI</string>
+    <string name="device_current_label">Thiết bị đang dùng</string>
+    <string name="device_status_active">Đang hoạt động</string>
+    <string name="device_status_replaced">Đã thay thế</string>
+    <string name="device_status_inactive">Không hoạt động</string>
+    <string name="device_enrolled_format">Đăng ký: %1$s</string>
+    <string name="device_unknown">Không rõ</string>
+    <string name="device_no_device">Chưa có thiết bị nào được đăng ký</string>
+    <string name="device_info_note">Bạn chỉ được dùng 1 thiết bị để điểm danh. Nếu cần đổi máy, hãy gửi yêu cầu bên dưới.</string>
+    <string name="device_change_btn">XIN ĐỔI THIẾT BỊ</string>
+    <string name="device_history_label">Lịch sử thiết bị</string>
+
+    <!-- ═══ SA-11: Document Screen ═══ -->
+    <string name="doc_title">TÀI LIỆU</string>
+    <string name="doc_section_legal">Giấy tờ pháp lý</string>
+    <string name="doc_section_photos">Ảnh hồ sơ</string>
+    <string name="doc_empty">Chưa có tài liệu nào</string>
+    <string name="doc_uploaded_format">Ngày: %1$s</string>
+    <string name="doc_view_btn">Xem</string>
+    <string name="doc_info_note">Nếu cần bổ sung giấy tờ, hãy liên hệ cán bộ phụ trách.</string>
+
+    <!-- ═══ SA-12: Contact Screen ═══ -->
+    <string name="contact_title">LIÊN HỆ CÁN BỘ</string>
+    <string name="contact_officer_label">Cán bộ phụ trách</string>
+    <string name="contact_role_field_officer">Cán bộ cơ sở</string>
+    <string name="contact_no_officer">Chưa có thông tin cán bộ phụ trách</string>
+    <string name="contact_agency_label">Cơ quan quản lý</string>
+    <string name="contact_hotline_label">Đường dây nóng</string>
+    <string name="contact_hotline_number">1900 1234</string>
+    <string name="contact_hotline_hours">Miễn phí, 24/7</string>
+    <string name="contact_call_btn">Gọi ngay</string>
+
+    <!-- ═══ SA-14: Settings Screen ═══ -->
+    <string name="settings_title">CÀI ĐẶT</string>
+    <string name="settings_section_security">Bảo mật</string>
+    <string name="settings_section_app">Ứng dụng</string>
+    <string name="settings_change_password">Đổi mật khẩu</string>
+    <string name="settings_current_password">Mật khẩu hiện tại</string>
+    <string name="settings_new_password">Mật khẩu mới</string>
+    <string name="settings_confirm">Xác nhận</string>
+    <string name="settings_password_changed">Đổi mật khẩu thành công!</string>
+    <string name="settings_wrong_password">Mật khẩu hiện tại không đúng</string>
+    <string name="settings_password_validation">Mật khẩu không hợp lệ. Kiểm tra lại yêu cầu.</string>
+    <string name="settings_app_version">Phiên bản</string>
+    <string name="settings_version_format">%1$s</string>
 </resources>

@@ -53,9 +53,20 @@ android {
                 "META-INF/NOTICE.txt",
                 "META-INF/notice.txt",
                 "META-INF/versions/**",
+                "META-INF/BCKEY.DSA",
+                "META-INF/BCKEY.SF",
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE-notice.md",
             )
         }
     }
+}
+
+// Prevent BouncyCastle version conflicts between jmrtd and other dependencies.
+// jmrtd uses bcprov-jdk18on; older bcprov-jdk15on causes duplicate class errors.
+configurations.all {
+    exclude(group = "org.bouncycastle", module = "bcprov-jdk15on")
+    exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18")
 }
 
 dependencies {
@@ -87,6 +98,9 @@ dependencies {
     implementation(libs.camerax.view)
 
     // NFC / JMRTD (ICAO 9303 for reading CCCD chip)
+    // JMRTD pulls in bcprov-jdk18on (BouncyCastle) as a transitive dependency.
+    // EnrollmentActivity registers the full BC provider at position 1 on startup
+    // to replace Android's stripped-down BC (which lacks ECDH/AES-CMAC for PACE).
     implementation(libs.jmrtd)
     implementation(libs.scuba.sc.android)
 

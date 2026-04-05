@@ -743,6 +743,121 @@ GET /areas
 2. `GET /events/trace?cccd=001304056789` -> "Tran Thi Mai" + events
 3. `GET /events/trace?cccd=999999999999` -> 404 Not Found (khong co doi tuong)
 
+### Luong 7: Diem danh (Check-in) — NFC + Face + Liveness + Device
+1. `POST /checkin` (multipart/form-data) -> Gui du lieu NFC + anh khuon mat + thong tin thiet bi
+   ```
+   POST /checkin
+   Authorization: Bearer {{subjectAccessToken}}
+   Content-Type: multipart/form-data
+
+   Fields:
+     chipDataHash:        SHA-256 of DG1 raw bytes
+     chipSerial:          NFC UID hex
+     passiveAuthVerified: true/false
+     passiveAuthData:     Base64 SOD (optional)
+     gpsLat:              decimal (optional)
+     gpsLng:              decimal (optional)
+     clientTimestamp:      ISO 8601 (e.g., 2026-04-05T08:30:00Z)
+     deviceId:            Android device ID (Settings.Secure.ANDROID_ID)
+     deviceModel:         e.g., "Samsung Galaxy S24"
+     osVersion:           e.g., "Android 14 (API 34)"
+     faceImage:           JPEG file (max 10MB)
+   ```
+   Expected `200`:
+   ```json
+   {
+     "success": true,
+     "data": {
+       "event": {
+         "id": "uuid",
+         "code": "EVT-20260405-0001ABCD",
+         "type": "CHECKIN",
+         "result": "SUCCESS",
+         "nfc_verified": true,
+         "nfc_cccd_match": true,
+         "face_match_score": 87.5,
+         "liveness_score": 82.3,
+         "liveness_pass": true,
+         "device_matched": true,
+         "in_geofence": null,
+         "created_at": "2026-04-05T08:30:01Z"
+       },
+       "message": "Diem danh thanh cong. Khuon mat khop 88%."
+     }
+   }
+   ```
+   Event types tra ve: CHECKIN (ok), FACE_MISMATCH, NFC_MISMATCH, DEVICE_CHANGE
+   Result: SUCCESS, FAILED, WARNING
+
+2. Test face mismatch: gui anh khuon mat khac voi anh da dang ky -> result=FAILED, type=FACE_MISMATCH
+3. Test liveness fail: gui anh tinh (in tren giay) -> liveness_pass=false, result=FAILED
+4. Test device mismatch: gui deviceId khac voi thiet bi da dang ky -> device_matched=false, result=WARNING
+5. Test NFC mismatch: gui chipDataHash sai -> nfc_verified=false, type=NFC_MISMATCH, result=FAILED
+
+### Luong 8: Dang ky thiet bi (Device Enrollment)
+1. `POST /enrollment/device` -> Dang ky thiet bi trong qua trinh enrollment
+   ```
+   POST /enrollment/device
+   Authorization: Bearer {{subjectAccessToken}}
+   Content-Type: application/json
+
+   {
+     "deviceId": "abc123def456",
+     "deviceModel": "Samsung Galaxy A54",
+     "osVersion": "Android 14 (API 34)"
+   }
+   ```
+   Expected `201`:
+   ```json
+   {
+     "success": true,
+     "data": {
+       "deviceRecordId": "uuid",
+       "enrolledAt": "2026-04-05T...",
+       "message": "Dang ky thiet bi thanh cong"
+     }
+   }
+   ```
+
+2. `GET /devices/current` -> Xem thiet bi hien tai cua doi tuong
+   ```
+   GET /devices/current
+   Authorization: Bearer {{subjectAccessToken}}
+   ```
+   Expected `200`: `{ current: { id, device_id, device_model, ... }, history: [...] }`
+
+### Luong 9: NFC Enrollment voi anh chan dung DG2
+1. `POST /enrollment/nfc` (co them truong dg2FaceImage)
+   ```
+   POST /enrollment/nfc
+   Authorization: Bearer {{subjectAccessToken}}
+   Content-Type: application/json
+
+   {
+     "chipData": "sha256-hash-of-dg1",
+     "chipSerial": "aabbccdd",
+     "passiveAuthData": "base64-sod...",
+     "chipFullName": "NGUYEN VAN HUNG",
+     "chipCccdNumber": "001204012345",
+     "dg2FaceImage": "base64-encoded-jpeg-face-from-chip..."
+   }
+   ```
+   Expected `201`:
+   ```json
+   {
+     "success": true,
+     "data": {
+       "nfcRecordId": "uuid",
+       "enrolledAt": "...",
+       "dg2FaceEnrolled": true,
+       "message": "Dang ky NFC va anh chan dung CCCD thanh cong"
+     }
+   }
+   ```
+   Neu dg2FaceImage khong co hoac khong doc duoc: dg2FaceEnrolled=false, enrollment van thanh cong.
+
+---
+
 ### Luong 6: Export Excel
 1. `GET /events/export` -> tai file su-kien-YYYY-MM-DD.xlsx
 2. `GET /alerts/export` -> tai file canh-bao-YYYY-MM-DD.xlsx

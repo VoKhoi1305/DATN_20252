@@ -1,13 +1,16 @@
 package com.example.smtts.ui.enrollment
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.smtts.data.api.ApiClient
 import com.example.smtts.data.local.TokenManager
+import com.example.smtts.data.model.EnrollDeviceRequest
 import com.example.smtts.data.model.EnrollNfcRequest
 import com.example.smtts.nfc.CccdNfcReader
+import com.example.smtts.util.DeviceInfoHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,11 +20,12 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * Enrollment steps: NFC → Face → Submit (officer approval)
+ * Enrollment steps: NFC → Face → Device → Submit (officer approval)
  */
 enum class EnrollmentStep {
     NFC_SCAN,
     FACE_CAPTURE,
+    DEVICE_ENROLL,
     SUBMIT,
     DONE
 }
@@ -30,8 +34,9 @@ sealed class EnrollmentUiState {
     data object Idle : EnrollmentUiState()
     data class InProgress(val step: EnrollmentStep) : EnrollmentUiState()
     data class NfcReadSuccess(val chipData: CccdNfcReader.CccdChipData) : EnrollmentUiState()
-    data class NfcSubmitSuccess(val message: String) : EnrollmentUiState()
+    data class NfcSubmitSuccess(val message: String, val dg2FaceEnrolled: Boolean = false) : EnrollmentUiState()
     data class FaceSuccess(val message: String, val qualityScore: Double, val livenessScore: Double) : EnrollmentUiState()
+    data class DeviceSuccess(val message: String) : EnrollmentUiState()
     data class Complete(val message: String) : EnrollmentUiState()
     data class Error(val message: String, val step: EnrollmentStep) : EnrollmentUiState()
 }
@@ -55,6 +60,13 @@ class EnrollmentViewModel(
 
     private val _faceDone = MutableStateFlow(false)
     val faceDone: StateFlow<Boolean> = _faceDone.asStateFlow()
+
+    private val _deviceDone = MutableStateFlow(false)
+    val deviceDone: StateFlow<Boolean> = _deviceDone.asStateFlow()
+
+    /** True when DG2 face photo from CCCD was successfully enrolled as reference */
+    private val _dg2FaceEnrolled = MutableStateFlow(false)
+    val dg2FaceEnrolled: StateFlow<Boolean> = _dg2FaceEnrolled.asStateFlow()
 
     /** Stores the last successfully read NFC chip data for display */
     private val _nfcChipData = MutableStateFlow<CccdNfcReader.CccdChipData?>(null)
@@ -84,10 +96,12 @@ class EnrollmentViewModel(
                         val status = body.data
                         _nfcDone.value = status.nfcEnrolled
                         _faceDone.value = status.faceEnrolled
+                        _deviceDone.value = status.deviceEnrolled
                         _currentStep.value = when {
                             status.enrollmentComplete -> EnrollmentStep.DONE
                             !status.nfcEnrolled -> EnrollmentStep.NFC_SCAN
                             !status.faceEnrolled -> EnrollmentStep.FACE_CAPTURE
+                            !status.deviceEnrolled -> EnrollmentStep.DEVICE_ENROLL
                             else -> EnrollmentStep.SUBMIT
                         }
                         if (status.enrollmentComplete) {
@@ -103,7 +117,6 @@ class EnrollmentViewModel(
 
     /**
      * Called when NFC chip data has been read locally (before server submit).
-     * Stores the chip data and transitions UI to show result + submit button.
      */
     fun onNfcChipRead(chipData: CccdNfcReader.CccdChipData) {
         _nfcChipData.value = chipData
@@ -112,6 +125,7 @@ class EnrollmentViewModel(
 
     /**
      * Submit NFC chip data to server.
+     * Includes DG2 face photo if available — server extracts face embedding from it.
      */
     fun submitNfcData() {
         val chipData = _nfcChipData.value ?: return
@@ -123,7 +137,8 @@ class EnrollmentViewModel(
                     chipSerial = chipData.chipSerial,
                     passiveAuthData = chipData.passiveAuthData,
                     chipFullName = chipData.fullName,
-                    chipCccdNumber = chipData.cccdNumber
+                    chipCccdNumber = chipData.cccdNumber,
+                    dg2FaceImage = chipData.dg2FaceImage
                 )
                 val response = enrollmentApi.enrollNfc(request)
 
@@ -131,7 +146,11 @@ class EnrollmentViewModel(
                     val body = response.body()
                     if (body != null && body.success) {
                         _nfcDone.value = true
-                        _uiState.value = EnrollmentUiState.NfcSubmitSuccess(body.data.message)
+                        _dg2FaceEnrolled.value = body.data.dg2FaceEnrolled
+                        _uiState.value = EnrollmentUiState.NfcSubmitSuccess(
+                            body.data.message,
+                            body.data.dg2FaceEnrolled
+                        )
                     } else {
                         _uiState.value = EnrollmentUiState.Error(
                             "Loi dang ky NFC",
@@ -156,17 +175,14 @@ class EnrollmentViewModel(
         }
     }
 
-    /**
-     * Advance to the next step.
-     */
     fun goToStep(step: EnrollmentStep) {
         _currentStep.value = step
     }
 
     /**
      * Submit face image to server.
-     * The server runs InsightFace/ArcFace for detection, quality check, liveness, and embedding.
-     * Does NOT auto-complete enrollment — user must explicitly submit in Step 3.
+     * If DG2 face was already enrolled during NFC step, this selfie verifies against it.
+     * Otherwise, this selfie becomes the reference face template.
      */
     fun submitFaceImage(imageBytes: ByteArray) {
         _uiState.value = EnrollmentUiState.InProgress(EnrollmentStep.FACE_CAPTURE)
@@ -189,7 +205,6 @@ class EnrollmentViewModel(
                             data.qualityScore,
                             data.livenessScore
                         )
-                        // Do NOT auto-complete — user submits in Step 3
                     } else {
                         _uiState.value = EnrollmentUiState.Error(
                             "Loi dang ky khuon mat",
@@ -215,8 +230,52 @@ class EnrollmentViewModel(
     }
 
     /**
-     * Submit enrollment for officer approval (Step 3).
-     * Transitions lifecycle to pending approval state.
+     * Enroll the device — reads device ID, model, OS version and sends to server.
+     */
+    fun enrollDevice(context: Context) {
+        _uiState.value = EnrollmentUiState.InProgress(EnrollmentStep.DEVICE_ENROLL)
+        viewModelScope.launch {
+            try {
+                val info = DeviceInfoHelper.collectDeviceInfo(context)
+                val request = EnrollDeviceRequest(
+                    deviceId = info.deviceId,
+                    deviceModel = info.deviceModel,
+                    osVersion = info.osVersion
+                )
+
+                val response = enrollmentApi.enrollDevice(request)
+
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null && body.success) {
+                        _deviceDone.value = true
+                        _uiState.value = EnrollmentUiState.DeviceSuccess(body.data.message)
+                    } else {
+                        _uiState.value = EnrollmentUiState.Error(
+                            "Loi dang ky thiet bi",
+                            EnrollmentStep.DEVICE_ENROLL
+                        )
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                    Log.e(TAG, "Device enroll failed: $errorBody")
+                    _uiState.value = EnrollmentUiState.Error(
+                        parseErrorMessage(errorBody),
+                        EnrollmentStep.DEVICE_ENROLL
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Device enroll error", e)
+                _uiState.value = EnrollmentUiState.Error(
+                    "Loi ket noi: ${e.message}",
+                    EnrollmentStep.DEVICE_ENROLL
+                )
+            }
+        }
+    }
+
+    /**
+     * Submit enrollment for officer approval (final step).
      */
     fun completeEnrollment() {
         viewModelScope.launch {

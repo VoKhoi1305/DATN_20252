@@ -15,6 +15,8 @@ import { CasesModule } from './modules/cases/cases.module';
 import { databaseConfigFactory } from './config/database.config';
 import { biometricDatabaseConfigFactory } from './config/biometric-database.config';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
+import { CheckinModule } from './modules/checkin/checkin.module';
+import { DevicesModule } from './modules/devices/devices.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -54,6 +56,8 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     AlertsModule,
     CasesModule,
     EnrollmentModule,
+    CheckinModule,
+    DevicesModule,
   ],
   providers: [
     {

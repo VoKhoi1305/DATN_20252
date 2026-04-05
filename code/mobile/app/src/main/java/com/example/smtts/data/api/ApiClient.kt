@@ -22,11 +22,27 @@ object ApiClient {
     private var tokenManager: TokenManager? = null
     private var _authApi: AuthApi? = null
     private var _enrollmentApi: EnrollmentApi? = null
+    private var _subjectApi: SubjectApi? = null
+    private var _eventApi: EventApi? = null
+    private var _geofenceApi: GeofenceApi? = null
+    private var _notificationApi: NotificationApi? = null
+    private var _requestApi: RequestApi? = null
+    private var _deviceApi: DeviceApi? = null
+    private var _documentApi: DocumentApi? = null
+    private var _checkinApi: CheckinApi? = null
 
     fun init(tokenManager: TokenManager) {
         this.tokenManager = tokenManager
         _authApi = null // force re-creation
         _enrollmentApi = null
+        _subjectApi = null
+        _eventApi = null
+        _geofenceApi = null
+        _notificationApi = null
+        _requestApi = null
+        _deviceApi = null
+        _documentApi = null
+        _checkinApi = null
     }
 
     val authApi: AuthApi
@@ -43,6 +59,70 @@ object ApiClient {
                 _enrollmentApi = createRetrofit().create(EnrollmentApi::class.java)
             }
             return _enrollmentApi!!
+        }
+
+    val subjectApi: SubjectApi
+        get() {
+            if (_subjectApi == null) {
+                _subjectApi = createRetrofit().create(SubjectApi::class.java)
+            }
+            return _subjectApi!!
+        }
+
+    val eventApi: EventApi
+        get() {
+            if (_eventApi == null) {
+                _eventApi = createRetrofit().create(EventApi::class.java)
+            }
+            return _eventApi!!
+        }
+
+    val geofenceApi: GeofenceApi
+        get() {
+            if (_geofenceApi == null) {
+                _geofenceApi = createRetrofit().create(GeofenceApi::class.java)
+            }
+            return _geofenceApi!!
+        }
+
+    val notificationApi: NotificationApi
+        get() {
+            if (_notificationApi == null) {
+                _notificationApi = createRetrofit().create(NotificationApi::class.java)
+            }
+            return _notificationApi!!
+        }
+
+    val requestApi: RequestApi
+        get() {
+            if (_requestApi == null) {
+                _requestApi = createRetrofit().create(RequestApi::class.java)
+            }
+            return _requestApi!!
+        }
+
+    val deviceApi: DeviceApi
+        get() {
+            if (_deviceApi == null) {
+                _deviceApi = createRetrofit().create(DeviceApi::class.java)
+            }
+            return _deviceApi!!
+        }
+
+    val documentApi: DocumentApi
+        get() {
+            if (_documentApi == null) {
+                _documentApi = createRetrofit().create(DocumentApi::class.java)
+            }
+            return _documentApi!!
+        }
+
+    val checkinApi: CheckinApi
+        get() {
+            if (_checkinApi == null) {
+                _checkinApi = createRetrofit().create(CheckinApi::class.java)
+            }
+            return _checkinApi!!
         }
 
     private fun createRetrofit(): Retrofit {

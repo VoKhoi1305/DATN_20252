@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash } from 'crypto';
 import * as ExcelJS from 'exceljs';
-import { Event } from './entities/event.entity';
+import { Event, EventResult } from './entities/event.entity';
 import { Subject } from '../subjects/entities/subject.entity';
 import { User } from '../users/entities/user.entity';
 import { AreasService } from '../areas/areas.service';
@@ -11,6 +11,9 @@ import { ListEventsDto } from './dto/list-events.dto';
 
 @Injectable()
 export class EventsService {
+  private readonly logger = new Logger(EventsService.name);
+  private eventCounter = 0;
+
   constructor(
     @InjectRepository(Event)
     private readonly eventRepo: Repository<Event>,
@@ -20,6 +23,74 @@ export class EventsService {
     private readonly subjectRepo: Repository<Subject>,
     private readonly areasService: AreasService,
   ) {}
+
+  /**
+   * Generate unique event code: EVT-YYYYMMDD-NNNN
+   */
+  private generateEventCode(): string {
+    const now = new Date();
+    const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+    const seq = String(++this.eventCounter).padStart(4, '0');
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `EVT-${date}-${seq}${rand}`;
+  }
+
+  /**
+   * Create a new event record.
+   * Used by check-in service and other modules to log occurrences.
+   */
+  async createEvent(data: {
+    type: string;
+    subjectId: string;
+    scenarioId?: string;
+    result: EventResult;
+    gpsLat?: number;
+    gpsLng?: number;
+    gpsAccuracy?: number;
+    inGeofence?: boolean;
+    geofenceDistance?: number;
+    faceMatchScore?: number;
+    nfcVerified?: boolean;
+    nfcCccdMatch?: boolean;
+    livenessScore?: number;
+    faceImageUrl?: string;
+    deviceId?: string;
+    deviceInfo?: Record<string, unknown>;
+    isVoluntary?: boolean;
+    extraData?: Record<string, unknown>;
+    clientTimestamp?: Date;
+    createdById?: string;
+  }): Promise<Event> {
+    const event = this.eventRepo.create({
+      code: this.generateEventCode(),
+      type: data.type,
+      subjectId: data.subjectId,
+      scenarioId: data.scenarioId ?? null,
+      result: data.result,
+      gpsLat: data.gpsLat ?? null,
+      gpsLng: data.gpsLng ?? null,
+      gpsAccuracy: data.gpsAccuracy ?? null,
+      inGeofence: data.inGeofence ?? null,
+      geofenceDistance: data.geofenceDistance ?? null,
+      faceMatchScore: data.faceMatchScore ?? null,
+      nfcVerified: data.nfcVerified ?? null,
+      nfcCccdMatch: data.nfcCccdMatch ?? null,
+      livenessScore: data.livenessScore ?? null,
+      faceImageUrl: data.faceImageUrl ?? null,
+      deviceId: data.deviceId ?? null,
+      deviceInfo: data.deviceInfo ?? null,
+      isVoluntary: data.isVoluntary ?? false,
+      extraData: data.extraData ?? null,
+      clientTimestamp: data.clientTimestamp ?? null,
+      createdById: data.createdById ?? null,
+    });
+
+    const saved = await this.eventRepo.save(event);
+    this.logger.log(
+      `Event created: ${saved.code} type=${saved.type} result=${saved.result} subject=${saved.subjectId}`,
+    );
+    return saved;
+  }
 
   async list(userId: string, query: ListEventsDto) {
     const user = await this.userRepo.findOneBy({ id: userId });

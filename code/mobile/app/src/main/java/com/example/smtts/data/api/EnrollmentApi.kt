@@ -2,6 +2,8 @@ package com.example.smtts.data.api
 
 import com.example.smtts.data.model.ApiResponse
 import com.example.smtts.data.model.CompleteEnrollmentResponse
+import com.example.smtts.data.model.EnrollDeviceRequest
+import com.example.smtts.data.model.EnrollDeviceResponse
 import com.example.smtts.data.model.EnrollFaceResponse
 import com.example.smtts.data.model.EnrollNfcRequest
 import com.example.smtts.data.model.EnrollNfcResponse
@@ -25,6 +27,9 @@ interface EnrollmentApi {
     @Multipart
     @POST("enrollment/face")
     suspend fun enrollFace(@Part file: MultipartBody.Part): Response<ApiResponse<EnrollFaceResponse>>
+
+    @POST("enrollment/device")
+    suspend fun enrollDevice(@Body request: EnrollDeviceRequest): Response<ApiResponse<EnrollDeviceResponse>>
 
     @POST("enrollment/complete")
     suspend fun completeEnrollment(): Response<ApiResponse<CompleteEnrollmentResponse>>

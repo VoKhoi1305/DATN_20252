@@ -119,7 +119,10 @@
       "Read(//e/DATN_20252/code/mobile/$LOCALAPPDATA/Android/**)",
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)",
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)",
-      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:compileDebugKotlin)"
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:compileDebugKotlin)",
+      "Bash(xargs cat:*)",
+      "Bash(where java:*)",
+      "Bash(java -version)"
     ]
   }
 }

@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/smtts_zinc_50"
+    tools:context=".ui.checkin.CheckinActivity">
+
+    <!-- Header Bar -->
+    <LinearLayout
+        android:id="@+id/headerBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/smtts_red_700"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/spacing_md"
+        android:paddingVertical="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:contentDescription="@string/enrollment_back"
+            android:padding="2dp"
+            android:src="@drawable/ic_logout"
+            android:rotation="180"
+            app:tint="@color/white" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:text="@string/checkin_title"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_lg"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Step Indicator (2 steps) -->
+    <LinearLayout
+        android:id="@+id/stepIndicator"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingVertical="@dimen/spacing_md"
+        android:paddingHorizontal="@dimen/spacing_xl"
+        android:background="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerBar">
+
+        <!-- Step 1: NFC -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvStep1"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_step_active"
+                android:gravity="center"
+                android:text="1"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvStep1Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/checkin_step_nfc"
+                android:textColor="@color/smtts_red_700"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Line 1-2 -->
+        <View
+            android:id="@+id/line1"
+            android:layout_width="0dp"
+            android:layout_height="2dp"
+            android:layout_marginHorizontal="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:layout_gravity="top"
+            android:layout_marginTop="15dp"
+            android:background="@drawable/bg_step_line_inactive" />
+
+        <!-- Step 2: Face -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvStep2"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_step_inactive"
+                android:gravity="center"
+                android:text="2"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvStep2Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/checkin_step_face"
+                android:textColor="@color/smtts_zinc_400"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Step Content (scrollable) -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/stepIndicator">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- ═══ STEP 1: NFC SCAN ═══ -->
+            <LinearLayout
+                android:id="@+id/stepNfc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md"
+                android:visibility="visible">
+
+                <!-- NFC Waiting Area -->
+                <LinearLayout
+                    android:id="@+id/nfcWaitingArea"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_xl">
+
+                    <ImageView
+                        android:id="@+id/ivNfcPulse"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:padding="16dp"
+                        android:background="@drawable/bg_icon_circle_red"
+                        android:src="@drawable/ic_nfc"
+                        android:contentDescription="NFC"
+                        app:tint="@color/white" />
+
+                    <TextView
+                        android:id="@+id/tvCheckinNfcStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        android:text="@string/checkin_nfc_waiting"
+                        android:textColor="@color/smtts_red_700"
+                        android:textSize="@dimen/text_base"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_sm"
+                        android:gravity="center"
+                        android:text="@string/checkin_nfc_instruction"
+                        android:textColor="@color/smtts_zinc_500"
+                        android:textSize="@dimen/text_sm" />
+
+                    <ProgressBar
+                        android:id="@+id/progressNfcRead"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_md"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:indeterminate="true"
+                        android:indeterminateTint="@color/smtts_red_700"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- NFC Result Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardNfcResult"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:strokeColor="#BBF7D0"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/spacing_md">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/spacing_sm"
+                            android:text="@string/checkin_nfc_verified"
+                            android:textColor="#16A34A"
+                            android:textSize="@dimen/text_sm"
+                            android:textStyle="bold" />
+
+                        <include
+                            android:id="@+id/nfcDataRows"
+                            layout="@layout/include_nfc_data_rows" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Next button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCheckinNfcNext"
+                    style="@style/Widget.SMTTS.Button.Login"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:text="@string/checkin_next_face"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- ═══ STEP 2: FACE CAPTURE ═══ -->
+            <LinearLayout
+                android:id="@+id/stepFace"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_md"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_sm"
+                    android:text="@string/checkin_face_title"
+                    android:textColor="@color/smtts_zinc_900"
+                    android:textSize="@dimen/text_lg"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:text="@string/checkin_face_instruction"
+                    android:textColor="@color/smtts_zinc_500"
+                    android:textSize="@dimen/text_sm" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp">
+
+                    <androidx.camera.view.PreviewView
+                        android:id="@+id/cameraPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="360dp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCaptureFace"
+                    style="@style/Widget.SMTTS.Button.Login"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:text="@string/checkin_capture_face" />
+
+                <ProgressBar
+                    android:id="@+id/progressSubmit"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- ═══ STEP DONE: RESULT ═══ -->
+            <LinearLayout
+                android:id="@+id/stepDone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="@dimen/spacing_xl"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/ivCheckinResultIcon"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:padding="14dp"
+                    android:background="@drawable/bg_step_done"
+                    android:src="@drawable/ic_shield"
+                    android:contentDescription="Result"
+                    app:tint="@color/white" />
+
+                <TextView
+                    android:id="@+id/tvCheckinResultTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:gravity="center"
+                    android:text="@string/checkin_result_success"
+                    android:textColor="#16A34A"
+                    android:textSize="@dimen/text_lg"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvCheckinResultMsg"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:gravity="center"
+                    android:textColor="@color/smtts_zinc_500"
+                    android:textSize="@dimen/text_sm"
+                    tools:text="Diem danh thanh cong luc 08:30" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnBackToHome"
+                    style="@style/Widget.SMTTS.Button.Login"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginTop="@dimen/spacing_lg"
+                    android:text="@string/checkin_back_home" />
+            </LinearLayout>
+
+        </FrameLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

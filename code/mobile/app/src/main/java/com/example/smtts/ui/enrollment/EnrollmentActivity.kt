@@ -154,9 +154,10 @@ class EnrollmentActivity : BaseNfcActivity() {
 
         // Step 2: Face
         binding.btnCaptureFace.setOnClickListener { capturePhoto() }
-        binding.btnFaceNext.setOnClickListener { viewModel.goToStep(EnrollmentStep.SUBMIT) }
+        binding.btnFaceNext.setOnClickListener { viewModel.goToStep(EnrollmentStep.DEVICE_ENROLL) }
 
-        // Step 3: Submit
+        // Step 3: Device (auto-enrolls on entering step)
+        // Step 4: Submit
         binding.btnSubmitEnrollment.setOnClickListener { viewModel.completeEnrollment() }
         binding.btnBackToHome.setOnClickListener { navigateToMain() }
 
@@ -180,7 +181,8 @@ class EnrollmentActivity : BaseNfcActivity() {
     // ── Step Navigation UI ────────────────────────────────
 
     private fun updateStepUI(step: EnrollmentStep) {
-        // Update step indicator circles
+        // Update step indicator circles (3 visible steps: NFC, Face, Submit)
+        // Device enrollment is auto-done between Face and Submit
         val step1Bg = when {
             step.ordinal > EnrollmentStep.NFC_SCAN.ordinal -> R.drawable.bg_step_done
             step == EnrollmentStep.NFC_SCAN -> R.drawable.bg_step_active
@@ -193,7 +195,7 @@ class EnrollmentActivity : BaseNfcActivity() {
         }
         val step3Bg = when {
             step == EnrollmentStep.DONE -> R.drawable.bg_step_done
-            step == EnrollmentStep.SUBMIT -> R.drawable.bg_step_active
+            step == EnrollmentStep.SUBMIT || step == EnrollmentStep.DEVICE_ENROLL -> R.drawable.bg_step_active
             else -> R.drawable.bg_step_inactive
         }
 
@@ -203,12 +205,11 @@ class EnrollmentActivity : BaseNfcActivity() {
 
         // Step labels color
         val activeColor = getColor(R.color.smtts_red_700)
-        val doneColor = getColor(R.color.smtts_red_700)
         val inactiveColor = getColor(R.color.smtts_zinc_400)
 
         binding.tvStep1Label.setTextColor(if (step.ordinal >= EnrollmentStep.NFC_SCAN.ordinal) activeColor else inactiveColor)
         binding.tvStep2Label.setTextColor(if (step.ordinal >= EnrollmentStep.FACE_CAPTURE.ordinal) activeColor else inactiveColor)
-        binding.tvStep3Label.setTextColor(if (step.ordinal >= EnrollmentStep.SUBMIT.ordinal) activeColor else inactiveColor)
+        binding.tvStep3Label.setTextColor(if (step.ordinal >= EnrollmentStep.SUBMIT.ordinal || step == EnrollmentStep.DEVICE_ENROLL) activeColor else inactiveColor)
 
         // Step lines
         binding.line1.setBackgroundResource(
@@ -223,7 +224,7 @@ class EnrollmentActivity : BaseNfcActivity() {
         // Show/hide step containers
         binding.stepNfc.visibility = if (step == EnrollmentStep.NFC_SCAN) View.VISIBLE else View.GONE
         binding.stepFace.visibility = if (step == EnrollmentStep.FACE_CAPTURE) View.VISIBLE else View.GONE
-        binding.stepSubmit.visibility = if (step == EnrollmentStep.SUBMIT || step == EnrollmentStep.DONE) View.VISIBLE else View.GONE
+        binding.stepSubmit.visibility = if (step == EnrollmentStep.SUBMIT || step == EnrollmentStep.DONE || step == EnrollmentStep.DEVICE_ENROLL) View.VISIBLE else View.GONE
 
         // Start camera when entering face step
         if (step == EnrollmentStep.FACE_CAPTURE && !cameraStarted) {
@@ -231,7 +232,12 @@ class EnrollmentActivity : BaseNfcActivity() {
             else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
 
-        // Populate Step 3 summary when entering submit step
+        // Auto-enroll device when entering device step, then move to submit
+        if (step == EnrollmentStep.DEVICE_ENROLL) {
+            viewModel.enrollDevice(this)
+        }
+
+        // Populate summary when entering submit step
         if (step == EnrollmentStep.SUBMIT) {
             populateSubmitSummary()
         }
@@ -275,7 +281,11 @@ class EnrollmentActivity : BaseNfcActivity() {
                 // Server accepted NFC data — show next button
                 binding.btnNfcSubmit.visibility = View.GONE
                 binding.btnNfcNext.visibility = View.VISIBLE
-                binding.tvNfcStatus.text = getString(R.string.enrollment_nfc_success)
+                binding.tvNfcStatus.text = if (state.dg2FaceEnrolled) {
+                    getString(R.string.enrollment_nfc_success) + "\n" + getString(R.string.enrollment_dg2_face_enrolled)
+                } else {
+                    getString(R.string.enrollment_nfc_success)
+                }
                 binding.tvNfcStatus.setTextColor(getColor(R.color.smtts_green_700))
                 showSnackbar(state.message)
             }
@@ -295,6 +305,12 @@ class EnrollmentActivity : BaseNfcActivity() {
                 showSnackbar(state.message)
             }
 
+            is EnrollmentUiState.DeviceSuccess -> {
+                // Device enrolled — auto-advance to submit step
+                showSnackbar(state.message)
+                viewModel.goToStep(EnrollmentStep.SUBMIT)
+            }
+
             is EnrollmentUiState.Complete -> {
                 // Enrollment submitted for approval
                 binding.btnSubmitEnrollment.visibility = View.GONE
@@ -311,6 +327,10 @@ class EnrollmentActivity : BaseNfcActivity() {
                     EnrollmentStep.FACE_CAPTURE -> {
                         binding.btnCaptureFace.isEnabled = true
                         binding.btnCaptureFace.text = getString(R.string.enrollment_face_capture_btn)
+                    }
+                    EnrollmentStep.DEVICE_ENROLL -> {
+                        // Device enrollment failed — allow retry via submit step
+                        binding.btnSubmitEnrollment.isEnabled = true
                     }
                     EnrollmentStep.SUBMIT -> {
                         binding.btnSubmitEnrollment.isEnabled = true

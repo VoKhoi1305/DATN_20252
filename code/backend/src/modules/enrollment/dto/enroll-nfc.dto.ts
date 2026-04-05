@@ -34,4 +34,13 @@ export class EnrollNfcDto {
   @IsString()
   @IsOptional()
   chipCccdNumber?: string;
+
+  /**
+   * Base64-encoded face photo from CCCD chip DG2.
+   * Used as the reference face template for check-in verification.
+   * If not provided, the enrollment selfie will be used as reference.
+   */
+  @IsString()
+  @IsOptional()
+  dg2FaceImage?: string;
 }

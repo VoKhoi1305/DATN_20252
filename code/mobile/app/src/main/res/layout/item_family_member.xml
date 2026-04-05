@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingVertical="4dp">
+
+    <TextView
+        android:id="@+id/tvMemberName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/smtts_zinc_900"
+        android:textSize="@dimen/text_base"
+        tools:text="Nguyễn Thị B (Vợ)" />
+
+    <TextView
+        android:id="@+id/tvMemberPhone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/smtts_zinc_500"
+        android:textSize="@dimen/text_sm"
+        tools:text="0987 654 321" />
+</LinearLayout>

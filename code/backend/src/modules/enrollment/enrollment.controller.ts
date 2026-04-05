@@ -15,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { EnrollmentService } from './enrollment.service';
 import { EnrollNfcDto } from './dto/enroll-nfc.dto';
+import { EnrollDeviceDto } from '../devices/dto/enroll-device.dto';
 
 @Controller('enrollment')
 export class EnrollmentController {
@@ -54,6 +55,7 @@ export class EnrollmentController {
       passiveAuthData: dto.passiveAuthData,
       chipFullName: dto.chipFullName,
       chipCccdNumber: dto.chipCccdNumber,
+      dg2FaceImage: dto.dg2FaceImage,
     });
   }
 
@@ -95,8 +97,23 @@ export class EnrollmentController {
   }
 
   /**
+   * POST /api/v1/enrollment/device
+   * Register the subject's device during enrollment.
+   * Reads basic device info (Android ID, model, OS version) and stores it.
+   * Each subject can only have 1 active device.
+   */
+  @Post('device')
+  @HttpCode(HttpStatus.CREATED)
+  async enrollDevice(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: EnrollDeviceDto,
+  ) {
+    return this.enrollmentService.enrollDevice(userId, dto);
+  }
+
+  /**
    * POST /api/v1/enrollment/complete
-   * Finalize enrollment after both NFC + Face are done.
+   * Finalize enrollment after NFC + Face + Device are done.
    * Transitions subject lifecycle: ENROLLMENT → DANG_QUAN_LY
    */
   @Post('complete')

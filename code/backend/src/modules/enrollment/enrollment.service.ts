@@ -11,6 +11,7 @@ import * as crypto from 'crypto';
 import { Subject, SubjectLifecycle } from '../subjects/entities/subject.entity';
 import { BiometricService } from '../biometric/biometric.service';
 import { FaceRecognitionClient } from './face-recognition.client';
+import { DevicesService } from '../devices/devices.service';
 import { ErrorCodes } from '../../common/constants/error-codes';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class EnrollmentService {
     private readonly subjectRepository: Repository<Subject>,
     private readonly biometricService: BiometricService,
     private readonly faceRecognitionClient: FaceRecognitionClient,
+    private readonly devicesService: DevicesService,
   ) {}
 
   /**
@@ -30,13 +32,15 @@ export class EnrollmentService {
   async getStatus(subjectId: string) {
     const subject = await this.findSubjectByUserId(subjectId);
     const biometric = await this.biometricService.getEnrollmentStatus(subject.id);
+    const device = await this.devicesService.getActiveDevice(subject.id);
 
     return {
       subjectId: subject.id,
       lifecycle: subject.lifecycle,
       nfcEnrolled: biometric.nfcEnrolled,
       faceEnrolled: biometric.faceEnrolled,
-      enrollmentComplete: biometric.complete,
+      deviceEnrolled: device !== null,
+      enrollmentComplete: biometric.complete && device !== null,
     };
   }
 
@@ -80,6 +84,7 @@ export class EnrollmentService {
       passiveAuthData?: string;
       chipFullName?: string;
       chipCccdNumber?: string;
+      dg2FaceImage?: string; // Base64-encoded face photo from CCCD chip DG2
     },
   ) {
     const subject = await this.findSubjectByUserId(userId);
@@ -131,10 +136,49 @@ export class EnrollmentService {
 
     this.logger.log(`NFC enrolled for subject ${subject.id}`);
 
+    // If DG2 face image from CCCD chip is provided, extract and store face template
+    let dg2FaceEnrolled = false;
+    if (data.dg2FaceImage) {
+      try {
+        const faceImageBuffer = Buffer.from(data.dg2FaceImage, 'base64');
+        const faceResult = await this.faceRecognitionClient.enrollFace(
+          faceImageBuffer,
+          'cccd_dg2_face.jpg',
+        );
+
+        // Store the CCCD face embedding as the reference template
+        const sourceImageHash = crypto
+          .createHash('sha256')
+          .update(faceImageBuffer)
+          .digest('hex');
+
+        await this.biometricService.enrollFaceTemplate({
+          subjectId: subject.id,
+          embedding: faceResult.embedding,
+          embeddingVersion: faceResult.embedding_version,
+          sourceImageHash,
+          qualityScore: faceResult.quality_score,
+        });
+
+        dg2FaceEnrolled = true;
+        this.logger.log(
+          `DG2 face template enrolled for subject ${subject.id} (quality=${faceResult.quality_score})`,
+        );
+      } catch (e: any) {
+        // DG2 face enrollment is optional — log but don't block
+        this.logger.warn(
+          `DG2 face enrollment failed for subject ${subject.id}: ${e.message}. Will use selfie enrollment instead.`,
+        );
+      }
+    }
+
     return {
       nfcRecordId: nfcRecord.id,
       enrolledAt: nfcRecord.enrolledAt,
-      message: 'Đăng ký NFC thành công',
+      dg2FaceEnrolled,
+      message: dg2FaceEnrolled
+        ? 'Đăng ký NFC và ảnh chân dung CCCD thành công'
+        : 'Đăng ký NFC thành công',
     };
   }
 
@@ -235,7 +279,32 @@ export class EnrollmentService {
   }
 
   /**
-   * Complete enrollment: verify both NFC + Face are done, transition lifecycle.
+   * Step 3: Enroll the subject's device.
+   * Captures Android device ID, model, and OS version.
+   */
+  async enrollDevice(
+    userId: string,
+    data: { deviceId: string; deviceModel?: string; osVersion?: string },
+  ) {
+    const subject = await this.findSubjectByUserId(userId);
+
+    this.validateEnrollmentState(subject);
+
+    const device = await this.devicesService.enrollDevice(subject.id, data);
+
+    this.logger.log(
+      `Device enrolled for subject ${subject.id}: ${data.deviceId} (${data.deviceModel})`,
+    );
+
+    return {
+      deviceRecordId: device.id,
+      enrolledAt: device.enrolledAt,
+      message: 'Đăng ký thiết bị thành công',
+    };
+  }
+
+  /**
+   * Complete enrollment: verify NFC + Face + Device are done, transition lifecycle.
    */
   async completeEnrollment(userId: string) {
     const subject = await this.findSubjectByUserId(userId);
@@ -253,6 +322,14 @@ export class EnrollmentService {
       throw new BadRequestException({
         code: ErrorCodes.ENROLLMENT_INCOMPLETE,
         message: 'Chưa hoàn thành đăng ký khuôn mặt',
+      });
+    }
+
+    const device = await this.devicesService.getActiveDevice(subject.id);
+    if (!device) {
+      throw new BadRequestException({
+        code: ErrorCodes.ENROLLMENT_INCOMPLETE,
+        message: 'Chưa đăng ký thiết bị. Vui lòng hoàn thành bước đăng ký thiết bị.',
       });
     }
 

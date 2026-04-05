@@ -44,9 +44,64 @@
             android:name=".ui.enrollment.EnrollmentActivity"
             android:exported="false" />
 
+        <!-- Check-in screen (NFC + Face attendance) -->
+        <activity
+            android:name=".ui.checkin.CheckinActivity"
+            android:exported="false" />
+
         <!-- Main app screen (after login) -->
         <activity
             android:name=".MainActivity"
+            android:exported="false" />
+
+        <!-- SA-05: Profile screen -->
+        <activity
+            android:name=".ui.profile.ProfileActivity"
+            android:exported="false" />
+
+        <!-- SA-06: Geofence screen -->
+        <activity
+            android:name=".ui.geofence.GeofenceActivity"
+            android:exported="false" />
+
+        <!-- SA-07: History screen -->
+        <activity
+            android:name=".ui.history.HistoryActivity"
+            android:exported="false" />
+
+        <!-- SA-08: Notification screen -->
+        <activity
+            android:name=".ui.notification.NotificationActivity"
+            android:exported="false" />
+
+        <!-- SA-09: Request screens -->
+        <activity
+            android:name=".ui.request.RequestListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.request.CreateRequestActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- SA-10: Device screen -->
+        <activity
+            android:name=".ui.device.DeviceActivity"
+            android:exported="false" />
+
+        <!-- SA-11: Document screen -->
+        <activity
+            android:name=".ui.document.DocumentActivity"
+            android:exported="false" />
+
+        <!-- SA-12: Contact screen -->
+        <activity
+            android:name=".ui.contact.ContactActivity"
+            android:exported="false" />
+
+        <!-- SA-14: Settings screen -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
             android:exported="false" />
 
     </application>

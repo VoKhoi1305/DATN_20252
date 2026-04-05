@@ -539,8 +539,20 @@ export class AuthService {
       areaName = area?.name ?? '';
     }
 
+    // For SUBJECT role, return the Subject ID so the mobile app can use it
+    // for all subject-related API calls (profile, events, devices, documents)
+    let effectiveId = user.id;
+    if (user.role === UserRole.SUBJECT) {
+      const subject = await this.subjectRepository.findOne({
+        where: { userAccountId: user.id },
+      });
+      if (subject) {
+        effectiveId = subject.id;
+      }
+    }
+
     return {
-      id: user.id,
+      id: effectiveId,
       username: user.username,
       fullName: user.fullName,
       role: user.role,

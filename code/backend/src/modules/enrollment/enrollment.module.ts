@@ -6,6 +6,7 @@ import { EnrollmentController } from './enrollment.controller';
 import { EnrollmentService } from './enrollment.service';
 import { FaceRecognitionClient } from './face-recognition.client';
 import { BiometricModule } from '../biometric/biometric.module';
+import { DevicesModule } from '../devices/devices.module';
 import { Subject } from '../subjects/entities/subject.entity';
 
 @Module({
@@ -15,6 +16,7 @@ import { Subject } from '../subjects/entities/subject.entity';
       storage: memoryStorage(),
     }),
     BiometricModule,
+    DevicesModule,
   ],
   controllers: [EnrollmentController],
   providers: [EnrollmentService, FaceRecognitionClient],

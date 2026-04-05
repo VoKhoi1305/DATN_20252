@@ -35,6 +35,17 @@ interface VerifyResult {
   embedding_version: string;
 }
 
+interface LivenessResult {
+  is_real: boolean;
+  liveness_score: number;
+  detail: string;
+}
+
+interface VerifyWithLivenessResult {
+  verify: VerifyResult;
+  liveness: LivenessResult;
+}
+
 interface HealthResult {
   status: string;
   model_loaded: boolean;
@@ -111,6 +122,49 @@ export class FaceRecognitionClient {
     }
 
     return response.json() as Promise<VerifyResult>;
+  }
+
+  /**
+   * Check liveness of a face image (anti-spoofing).
+   * Used during check-in to prevent static photo attacks.
+   */
+  async checkLiveness(imageBuffer: Buffer, filename: string): Promise<LivenessResult> {
+    const form = new FormData();
+    form.append('file', imageBuffer, {
+      filename,
+      contentType: 'image/jpeg',
+    });
+
+    const response = await fetch(`${this.baseUrl}/liveness`, {
+      method: 'POST',
+      body: form as any,
+      headers: form.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(`Liveness check failed: ${error.detail || response.statusText}`);
+    }
+
+    return response.json() as Promise<LivenessResult>;
+  }
+
+  /**
+   * Verify face + liveness in parallel.
+   * Used during check-in for combined verification.
+   */
+  async verifyFaceWithLiveness(
+    imageBuffer: Buffer,
+    filename: string,
+    storedEmbedding: number[],
+    threshold?: number,
+  ): Promise<VerifyWithLivenessResult> {
+    const [verify, liveness] = await Promise.all([
+      this.verifyFace(imageBuffer, filename, storedEmbedding, threshold),
+      this.checkLiveness(imageBuffer, filename),
+    ]);
+
+    return { verify, liveness };
   }
 
   /**
