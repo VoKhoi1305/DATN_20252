@@ -5,21 +5,23 @@ import { AlertRule } from './entities/alert-rule.entity';
 import { EscalationRule } from './entities/escalation-rule.entity';
 import { Case } from '../cases/entities/case.entity';
 import { User } from '../users/entities/user.entity';
+import { Event } from '../events/entities/event.entity';
 import { AreasModule } from '../areas/areas.module';
 import { AlertsService } from './alerts.service';
 import { AlertRulesService } from './alert-rules.service';
 import { EscalationRulesService } from './escalation-rules.service';
+import { EventProcessorService } from './event-processor.service';
 import { AlertsController } from './alerts.controller';
 import { AlertRulesController } from './alert-rules.controller';
 import { EscalationRulesController } from './escalation-rules.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Alert, AlertRule, EscalationRule, Case, User]),
+    TypeOrmModule.forFeature([Alert, AlertRule, EscalationRule, Case, User, Event]),
     AreasModule,
   ],
-  providers: [AlertsService, AlertRulesService, EscalationRulesService],
+  providers: [AlertsService, AlertRulesService, EscalationRulesService, EventProcessorService],
   controllers: [AlertsController, AlertRulesController, EscalationRulesController],
-  exports: [AlertsService, AlertRulesService, EscalationRulesService, TypeOrmModule],
+  exports: [AlertsService, AlertRulesService, EscalationRulesService, EventProcessorService, TypeOrmModule],
 })
 export class AlertsModule {}

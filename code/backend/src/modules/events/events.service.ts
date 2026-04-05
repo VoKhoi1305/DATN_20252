@@ -7,6 +7,7 @@ import { Event, EventResult } from './entities/event.entity';
 import { Subject } from '../subjects/entities/subject.entity';
 import { User } from '../users/entities/user.entity';
 import { AreasService } from '../areas/areas.service';
+import { EventProcessorService } from '../alerts/event-processor.service';
 import { ListEventsDto } from './dto/list-events.dto';
 
 @Injectable()
@@ -22,6 +23,7 @@ export class EventsService {
     @InjectRepository(Subject)
     private readonly subjectRepo: Repository<Subject>,
     private readonly areasService: AreasService,
+    private readonly eventProcessor: EventProcessorService,
   ) {}
 
   /**
@@ -89,6 +91,14 @@ export class EventsService {
     this.logger.log(
       `Event created: ${saved.code} type=${saved.type} result=${saved.result} subject=${saved.subjectId}`,
     );
+
+    // Evaluate alert rules asynchronously — never block event creation
+    this.eventProcessor.processEvent(saved).catch((err) => {
+      this.logger.error(
+        `Alert rule evaluation failed for event ${saved.code}: ${err.message}`,
+      );
+    });
+
     return saved;
   }
 
