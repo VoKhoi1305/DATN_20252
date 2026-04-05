@@ -10,8 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.smtts.R
 import com.example.smtts.data.api.ApiClient
 import com.example.smtts.data.local.TokenManager
@@ -184,43 +186,45 @@ class CreateRequestActivity : AppCompatActivity() {
 
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                val btnSubmit = findViewById<MaterialButton>(R.id.btnSubmit)
-                when (state) {
-                    is CreateRequestUiState.Idle -> {
-                        btnSubmit.isEnabled = true
-                        btnSubmit.text = getString(R.string.request_submit_btn)
-                    }
-                    is CreateRequestUiState.Submitting -> {
-                        btnSubmit.isEnabled = false
-                        btnSubmit.text = getString(R.string.request_submitting)
-                    }
-                    is CreateRequestUiState.Success -> {
-                        Snackbar.make(
-                            findViewById(R.id.main),
-                            getString(R.string.request_submit_success),
-                            Snackbar.LENGTH_SHORT
-                        ).setBackgroundTint(getColor(R.color.smtts_green_700))
-                            .setTextColor(getColor(R.color.white))
-                            .show()
-                        // Go back to list
-                        finish()
-                    }
-                    is CreateRequestUiState.Error -> {
-                        btnSubmit.isEnabled = true
-                        btnSubmit.text = getString(R.string.request_submit_btn)
-                        val errorMsg = when (state.message) {
-                            "NETWORK_ERROR" -> getString(R.string.error_network)
-                            "VALIDATION_ERROR" -> getString(R.string.request_error_validation)
-                            "RATE_LIMITED" -> getString(R.string.error_429)
-                            else -> getString(R.string.error_system)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    val btnSubmit = findViewById<MaterialButton>(R.id.btnSubmit)
+                    when (state) {
+                        is CreateRequestUiState.Idle -> {
+                            btnSubmit.isEnabled = true
+                            btnSubmit.text = getString(R.string.request_submit_btn)
                         }
-                        Snackbar.make(
-                            findViewById(R.id.main), errorMsg, Snackbar.LENGTH_LONG
-                        ).setBackgroundTint(getColor(R.color.smtts_red_700))
-                            .setTextColor(getColor(R.color.white))
-                            .show()
-                        viewModel.resetState()
+                        is CreateRequestUiState.Submitting -> {
+                            btnSubmit.isEnabled = false
+                            btnSubmit.text = getString(R.string.request_submitting)
+                        }
+                        is CreateRequestUiState.Success -> {
+                            Snackbar.make(
+                                findViewById(R.id.main),
+                                getString(R.string.request_submit_success),
+                                Snackbar.LENGTH_SHORT
+                            ).setBackgroundTint(getColor(R.color.smtts_green_700))
+                                .setTextColor(getColor(R.color.white))
+                                .show()
+                            viewModel.resetState()
+                            finish()
+                        }
+                        is CreateRequestUiState.Error -> {
+                            btnSubmit.isEnabled = true
+                            btnSubmit.text = getString(R.string.request_submit_btn)
+                            val errorMsg = when (state.message) {
+                                "NETWORK_ERROR" -> getString(R.string.error_network)
+                                "VALIDATION_ERROR" -> getString(R.string.request_error_validation)
+                                "RATE_LIMITED" -> getString(R.string.error_429)
+                                else -> getString(R.string.error_system)
+                            }
+                            Snackbar.make(
+                                findViewById(R.id.main), errorMsg, Snackbar.LENGTH_LONG
+                            ).setBackgroundTint(getColor(R.color.smtts_red_700))
+                                .setTextColor(getColor(R.color.white))
+                                .show()
+                            viewModel.resetState()
+                        }
                     }
                 }
             }

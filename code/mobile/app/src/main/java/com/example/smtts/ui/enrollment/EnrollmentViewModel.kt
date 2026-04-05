@@ -98,14 +98,23 @@ class EnrollmentViewModel(
                         _faceDone.value = status.faceEnrolled
                         _deviceDone.value = status.deviceEnrolled
                         _currentStep.value = when {
+                            status.lifecycle == "DANG_CHO_PHE_DUYET" -> EnrollmentStep.DONE
+                            status.lifecycle == "DANG_QUAN_LY" -> EnrollmentStep.DONE
                             status.enrollmentComplete -> EnrollmentStep.DONE
                             !status.nfcEnrolled -> EnrollmentStep.NFC_SCAN
                             !status.faceEnrolled -> EnrollmentStep.FACE_CAPTURE
                             !status.deviceEnrolled -> EnrollmentStep.DEVICE_ENROLL
                             else -> EnrollmentStep.SUBMIT
                         }
-                        if (status.enrollmentComplete) {
-                            _uiState.value = EnrollmentUiState.Complete("Da hoan tat dang ky")
+                        if (status.enrollmentComplete ||
+                            status.lifecycle == "DANG_CHO_PHE_DUYET" ||
+                            status.lifecycle == "DANG_QUAN_LY") {
+                            _uiState.value = EnrollmentUiState.Complete(
+                                when (status.lifecycle) {
+                                    "DANG_CHO_PHE_DUYET" -> "Hồ sơ đã gửi, đang chờ cán bộ phê duyệt"
+                                    else -> "Đã hoàn tất đăng ký sinh trắc học"
+                                }
+                            )
                         }
                     }
                 }

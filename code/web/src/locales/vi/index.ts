@@ -14,3 +14,4 @@ export { default as alertRules } from './alertRules';
 export { default as escalationRules } from './escalationRules';
 export { default as trace } from './trace';
 export { default as users } from './users';
+export { default as enrollmentApprovals } from './enrollmentApprovals';

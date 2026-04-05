@@ -2,6 +2,17 @@ package com.example.smtts.data.model
 
 import com.google.gson.annotations.SerializedName
 
+// ── NFC Failure Log Request (POST /checkin/nfc-failure) ──
+
+data class NfcFailureRequest(
+    @SerializedName("reason") val reason: String,
+    @SerializedName("chipSerial") val chipSerial: String? = null,
+    @SerializedName("deviceId") val deviceId: String? = null,
+    @SerializedName("gpsLat") val gpsLat: Double? = null,
+    @SerializedName("gpsLng") val gpsLng: Double? = null,
+    @SerializedName("clientTimestamp") val clientTimestamp: String
+)
+
 // ── Check-in Request (POST /checkin) ──
 
 data class CheckinRequest(

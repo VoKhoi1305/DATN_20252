@@ -14,6 +14,7 @@ import EnrollmentManagementPage from '@/pages/subjects/EnrollmentManagementPage'
 import MapPage from '@/pages/map/MapPage';
 import ScenariosPage from '@/pages/scenarios/ScenariosPage';
 import ApprovalsPage from '@/pages/approvals/ApprovalsPage';
+import EnrollmentApprovalsPage from '@/pages/enrollment-approvals/EnrollmentApprovalsPage';
 import EventsPage from '@/pages/events/EventsPage';
 import AlertsPage from '@/pages/alerts/AlertsPage';
 import CasesPage from '@/pages/cases/CasesPage';
@@ -55,6 +56,7 @@ function App() {
           <Route path="/quy-tac-canh-bao" element={<AlertRuleBuilderPage />} />
           <Route path="/quy-tac-leo-thang" element={<EscalationRuleBuilderPage />} />
           <Route path="/xet-duyet" element={<ApprovalsPage />} />
+          <Route path="/duyet-dang-ky" element={<EnrollmentApprovalsPage />} />
           <Route path="/truy-vet" element={<TracePage />} />
           <Route path="/admin/tai-khoan" element={<UserListPage />} />
           <Route path="/admin/tai-khoan/them-moi" element={<UserCreatePage />} />

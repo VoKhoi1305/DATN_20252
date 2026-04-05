@@ -10,8 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.smtts.BuildConfig
 import com.example.smtts.R
 import com.example.smtts.data.api.ApiClient
@@ -84,23 +86,25 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.changePasswordState.collect { state ->
-                when (state) {
-                    is ChangePasswordUiState.Success -> {
-                        showSnackbar(getString(R.string.settings_password_changed))
-                        viewModel.resetChangePasswordState()
-                    }
-                    is ChangePasswordUiState.Error -> {
-                        val msg = when (state.message) {
-                            "WRONG_PASSWORD" -> getString(R.string.settings_wrong_password)
-                            "VALIDATION_ERROR" -> getString(R.string.settings_password_validation)
-                            "NETWORK_ERROR" -> getString(R.string.error_network)
-                            else -> getString(R.string.error_system)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.changePasswordState.collect { state ->
+                    when (state) {
+                        is ChangePasswordUiState.Success -> {
+                            showSnackbar(getString(R.string.settings_password_changed))
+                            viewModel.resetChangePasswordState()
                         }
-                        showSnackbar(msg)
-                        viewModel.resetChangePasswordState()
+                        is ChangePasswordUiState.Error -> {
+                            val msg = when (state.message) {
+                                "WRONG_PASSWORD" -> getString(R.string.settings_wrong_password)
+                                "VALIDATION_ERROR" -> getString(R.string.settings_password_validation)
+                                "NETWORK_ERROR" -> getString(R.string.error_network)
+                                else -> getString(R.string.error_system)
+                            }
+                            showSnackbar(msg)
+                            viewModel.resetChangePasswordState()
+                        }
+                        else -> { }
                     }
-                    else -> { }
                 }
             }
         }

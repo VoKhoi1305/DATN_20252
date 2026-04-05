@@ -225,12 +225,13 @@ class FaceEngine:
         sat_std = float(np.std(hsv[:, :, 1]))
 
         # Combine scores (weighted heuristic)
-        # Normalize laplacian variance (typical range 0-2000 for real faces)
-        lap_score = min(1.0, lap_var / 800.0)
-        # HF energy ratio (real: 0.15-0.35, fake: 0.05-0.15)
-        hf_score = min(1.0, hf_energy / 0.25)
-        # Saturation variation (real: high std, screen: lower)
-        sat_score = min(1.0, sat_std / 40.0)
+        # Calibrated for mobile JPEG (CameraX front camera, quality=90):
+        # - JPEG compression reduces Laplacian variance significantly vs. high-res cameras
+        # - DCT high-frequency energy is lower in compressed images
+        # - Typical real-face range on mobile: lap_var=50-400, hf=0.04-0.15, sat_std=10-40
+        lap_score = min(1.0, lap_var / 150.0)   # was 800 (for professional cameras)
+        hf_score = min(1.0, hf_energy / 0.10)   # was 0.25 (JPEG removes HF content)
+        sat_score = min(1.0, sat_std / 20.0)     # was 40 (mobile front cam)
 
         liveness_score = 0.5 * lap_score + 0.3 * hf_score + 0.2 * sat_score
         liveness_score = round(float(liveness_score), 4)

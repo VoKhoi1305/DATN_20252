@@ -11,8 +11,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.snackbar.Snackbar
 import com.example.smtts.BuildConfig
 import com.example.smtts.R
 import com.example.smtts.data.api.ApiClient
@@ -55,11 +58,13 @@ class DocumentActivity : AppCompatActivity() {
 
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is DocumentUiState.Loading -> showLoading()
-                    is DocumentUiState.Success -> showDocuments(state.legalDocs, state.photoDocs)
-                    is DocumentUiState.Error -> showError(state.message)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is DocumentUiState.Loading -> showLoading()
+                        is DocumentUiState.Success -> showDocuments(state.legalDocs, state.photoDocs)
+                        is DocumentUiState.Error -> showError(state.message)
+                    }
                 }
             }
         }
@@ -119,7 +124,15 @@ class DocumentActivity : AppCompatActivity() {
         val baseUrl = BuildConfig.API_BASE_URL.removeSuffix("/")
         val url = "$baseUrl${doc.storedPath}"
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-        startActivity(intent)
+        try {
+            startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            Snackbar.make(
+                findViewById(R.id.main),
+                getString(R.string.error_system),
+                Snackbar.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun formatFileSize(bytes: Long?): String {

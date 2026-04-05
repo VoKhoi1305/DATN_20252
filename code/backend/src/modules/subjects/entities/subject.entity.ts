@@ -22,6 +22,8 @@ export enum SubjectStatus {
 export enum SubjectLifecycle {
   KHOI_TAO = 'KHOI_TAO',
   ENROLLMENT = 'ENROLLMENT',
+  /** Biometric enrollment complete, waiting for officer review */
+  DANG_CHO_PHE_DUYET = 'DANG_CHO_PHE_DUYET',
   DANG_QUAN_LY = 'DANG_QUAN_LY',
   TAI_HOA_NHAP = 'TAI_HOA_NHAP',
   KET_THUC = 'KET_THUC',
@@ -121,6 +123,23 @@ export class Subject {
 
   @Column({ name: 'enrollment_date', type: 'timestamptz', nullable: true })
   enrollmentDate!: Date | null;
+
+  /** Set when subject submits enrollment for officer review */
+  @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
+  submittedAt!: Date | null;
+
+  /** Officer who approved or rejected the enrollment */
+  @Column({ name: 'approved_by_id', type: 'uuid', nullable: true })
+  approvedById!: string | null;
+
+  @Column({ name: 'approved_at', type: 'timestamptz', nullable: true })
+  approvedAt!: Date | null;
+
+  @Column({ name: 'approval_note', type: 'text', nullable: true })
+  approvalNote!: string | null;
+
+  @Column({ name: 'rejection_note', type: 'text', nullable: true })
+  rejectionNote!: string | null;
 
   @Column({ name: 'custom_fields', type: 'jsonb', default: '{}' })
   customFields!: Record<string, unknown>;

@@ -30,21 +30,16 @@ class ContactViewModel(private val tokenManager: TokenManager) : ViewModel() {
     private val subjectApi = ApiClient.subjectApi
 
     fun loadContact() {
-        val user = tokenManager.getUser() ?: run {
-            _uiState.value = ContactUiState.Error("USER_NOT_FOUND")
-            return
-        }
-
         _uiState.value = ContactUiState.Loading
 
         viewModelScope.launch {
             try {
-                val response = subjectApi.getSubjectDetail(user.id)
+                val response = subjectApi.getMyProfile()
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val profile = response.body()!!.data
+                    val profile = response.body()?.data
                     _uiState.value = ContactUiState.Success(
-                        officer = profile.officer,
-                        area = profile.area
+                        officer = profile?.officer,
+                        area = profile?.area
                     )
                 } else {
                     _uiState.value = ContactUiState.Error("LOAD_FAILED")

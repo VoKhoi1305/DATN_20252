@@ -1,6 +1,9 @@
 package com.example.smtts.ui.checkin
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
+import android.location.LocationManager
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -8,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.smtts.data.api.ApiClient
 import com.example.smtts.data.local.TokenManager
 import com.example.smtts.data.model.CheckinEventResult
+import com.example.smtts.data.model.NfcFailureRequest
 import com.example.smtts.nfc.CccdNfcReader
 import com.example.smtts.util.DeviceInfoHelper
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +86,58 @@ class CheckinViewModel(
      * 3. Server verifies NFC + face (with liveness) + device
      * 4. Returns face match score %, liveness result, event outcome
      */
+    /**
+     * Get last known GPS location. Returns null if permission denied or unavailable.
+     * Uses LocationManager directly (no play-services dependency needed).
+     */
+    @SuppressLint("MissingPermission")
+    private fun getLastLocation(context: Context): Location? {
+        return try {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val providers = listOf(
+                LocationManager.GPS_PROVIDER,
+                LocationManager.NETWORK_PROVIDER,
+                LocationManager.PASSIVE_PROVIDER
+            )
+            providers.mapNotNull { provider ->
+                if (lm.isProviderEnabled(provider)) lm.getLastKnownLocation(provider) else null
+            }.maxByOrNull { it.time }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not get location: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Log a mobile-side NFC read failure to the backend immediately.
+     * Called when the chip cannot be read or passive auth fails on device.
+     */
+    fun logNfcFailure(context: Context, reason: String, chipSerial: String? = null) {
+        viewModelScope.launch {
+            try {
+                val now = isoNow()
+                val location = getLastLocation(context)
+                val deviceInfo = DeviceInfoHelper.collectDeviceInfo(context)
+                val request = NfcFailureRequest(
+                    reason = reason,
+                    chipSerial = chipSerial,
+                    deviceId = deviceInfo.deviceId,
+                    gpsLat = location?.latitude,
+                    gpsLng = location?.longitude,
+                    clientTimestamp = now
+                )
+                val response = checkinApi.logNfcFailure(request)
+                if (response.isSuccessful) {
+                    Log.i(TAG, "NFC failure logged to backend: reason=$reason")
+                } else {
+                    Log.w(TAG, "NFC failure log failed: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not log NFC failure to backend: ${e.message}")
+            }
+        }
+    }
+
     fun submitCheckin(faceImageBytes: ByteArray, context: Context) {
         val nfc = chipData ?: run {
             _uiState.value = CheckinUiState.Error("Chua quet NFC. Vui long quet lai.", CheckinStep.FACE_CAPTURE)
@@ -94,12 +150,11 @@ class CheckinViewModel(
         viewModelScope.launch {
             try {
                 val textType = "text/plain".toMediaTypeOrNull()
-                val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                    timeZone = TimeZone.getTimeZone("UTC")
-                }.format(Date())
+                val now = isoNow()
 
-                // Collect device info
+                // Collect device info + GPS location
                 val deviceInfo = DeviceInfoHelper.collectDeviceInfo(context)
+                val location = getLastLocation(context)
 
                 val faceBody = faceImageBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
                 val facePart = MultipartBody.Part.createFormData("faceImage", "face.jpg", faceBody)
@@ -109,8 +164,8 @@ class CheckinViewModel(
                     chipSerial = nfc.chipSerial.toRequestBody(textType),
                     passiveAuthVerified = nfc.passiveAuthVerified.toString().toRequestBody(textType),
                     passiveAuthData = nfc.passiveAuthData?.toRequestBody(textType),
-                    gpsLat = null, // GPS to be added later
-                    gpsLng = null,
+                    gpsLat = location?.latitude?.toString()?.toRequestBody(textType),
+                    gpsLng = location?.longitude?.toString()?.toRequestBody(textType),
                     clientTimestamp = now.toRequestBody(textType),
                     deviceId = deviceInfo.deviceId.toRequestBody(textType),
                     deviceModel = deviceInfo.deviceModel.toRequestBody(textType),
@@ -156,6 +211,11 @@ class CheckinViewModel(
     fun resetError() {
         _uiState.value = CheckinUiState.Idle
     }
+
+    private fun isoNow(): String =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+            .apply { timeZone = TimeZone.getTimeZone("UTC") }
+            .format(Date())
 
     private fun parseErrorMessage(errorBody: String): String {
         return try {

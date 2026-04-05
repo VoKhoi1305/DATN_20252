@@ -17,6 +17,7 @@ import { biometricDatabaseConfigFactory } from './config/biometric-database.conf
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 import { CheckinModule } from './modules/checkin/checkin.module';
 import { DevicesModule } from './modules/devices/devices.module';
+import { RequestsModule } from './modules/requests/requests.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
@@ -58,6 +59,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     EnrollmentModule,
     CheckinModule,
     DevicesModule,
+    RequestsModule,
   ],
   providers: [
     {

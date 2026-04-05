@@ -24,6 +24,7 @@ const layout = {
   navScenarios: 'Kịch bản',
   navAdminSection: 'Quản trị',
   navAdmin: 'Tài khoản',
+  navEnrollmentApprovals: 'Duyệt đăng ký',
 
   // Common UI
   ariaClose: 'Đóng',

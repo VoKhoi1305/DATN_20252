@@ -9,8 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.smtts.R
 import com.example.smtts.data.api.ApiClient
 import com.example.smtts.data.local.TokenManager
@@ -57,21 +59,14 @@ class GeofenceActivity : AppCompatActivity() {
     }
 
     private fun loadFromScenario() {
-        val user = tokenManager.getUser()
-        if (user == null) {
-            showError("USER_NOT_FOUND")
-            return
-        }
-
         lifecycleScope.launch {
             try {
-                val response = ApiClient.subjectApi.getSubjectDetail(user.id)
+                val response = ApiClient.subjectApi.getMyProfile()
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val profile = response.body()!!.data
-                    val area = profile.area
-                    if (area != null) {
-                        // Use area info to display geofence context
-                        // The geofence data is typically linked via the scenario/area
+                    val profile = response.body()?.data
+                    val scenario = profile?.scenario
+                    if (scenario != null) {
+                        // Scenario has geofence info — load via geofence API
                         showError("NO_GEOFENCE")
                     } else {
                         showError("NO_GEOFENCE")
@@ -91,13 +86,15 @@ class GeofenceActivity : AppCompatActivity() {
 
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is GeofenceUiState.Loading -> showLoading()
-                    is GeofenceUiState.Success -> showGeofence(
-                        state.geofence, state.curfewStart, state.curfewEnd
-                    )
-                    is GeofenceUiState.Error -> showError(state.message)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is GeofenceUiState.Loading -> showLoading()
+                        is GeofenceUiState.Success -> showGeofence(
+                            state.geofence, state.curfewStart, state.curfewEnd
+                        )
+                        is GeofenceUiState.Error -> showError(state.message)
+                    }
                 }
             }
         }

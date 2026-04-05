@@ -10,8 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.smtts.R
@@ -86,11 +88,13 @@ class RequestListActivity : AppCompatActivity() {
 
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is RequestListUiState.Loading -> showLoading()
-                    is RequestListUiState.Success -> showRequests(state)
-                    is RequestListUiState.Error -> showError(state.message)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is RequestListUiState.Loading -> showLoading()
+                        is RequestListUiState.Success -> showRequests(state)
+                        is RequestListUiState.Error -> showError(state.message)
+                    }
                 }
             }
         }

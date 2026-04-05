@@ -1,17 +1,20 @@
 import {
   Injectable,
   BadRequestException,
+  ForbiddenException,
   NotFoundException,
   Logger,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import * as crypto from 'crypto';
 import { Subject, SubjectLifecycle } from '../subjects/entities/subject.entity';
 import { BiometricService } from '../biometric/biometric.service';
 import { FaceRecognitionClient } from './face-recognition.client';
 import { DevicesService } from '../devices/devices.service';
+import { AreasService } from '../areas/areas.service';
+import { DataScopeLevel } from '../users/entities/user.entity';
 import { ErrorCodes } from '../../common/constants/error-codes';
 
 @Injectable()
@@ -24,6 +27,8 @@ export class EnrollmentService {
     private readonly biometricService: BiometricService,
     private readonly faceRecognitionClient: FaceRecognitionClient,
     private readonly devicesService: DevicesService,
+    private readonly areasService: AreasService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -89,6 +94,27 @@ export class EnrollmentService {
   ) {
     const subject = await this.findSubjectByUserId(userId);
 
+    // Auto-recover from inconsistent state:
+    // If lifecycle is KHOI_TAO (account created but not activated) OR
+    // lifecycle is DANG_QUAN_LY but biometrics are missing (incomplete previous enrollment),
+    // reset to ENROLLMENT so the subject can complete the process.
+    if (
+      subject.lifecycle === SubjectLifecycle.KHOI_TAO ||
+      subject.lifecycle === SubjectLifecycle.DANG_QUAN_LY
+    ) {
+      const biometric = await this.biometricService.getEnrollmentStatus(subject.id);
+      if (!biometric.nfcEnrolled || !biometric.faceEnrolled) {
+        const prevLifecycle = subject.lifecycle;
+        await this.subjectRepository.update(subject.id, {
+          lifecycle: SubjectLifecycle.ENROLLMENT,
+        });
+        subject.lifecycle = SubjectLifecycle.ENROLLMENT;
+        this.logger.log(
+          `Subject ${subject.id} lifecycle auto-reset to ENROLLMENT (was ${prevLifecycle}, biometrics incomplete)`,
+        );
+      }
+    }
+
     this.validateEnrollmentState(subject);
 
     // Cross-verify chip CCCD number with subject record
@@ -136,38 +162,48 @@ export class EnrollmentService {
 
     this.logger.log(`NFC enrolled for subject ${subject.id}`);
 
-    // If DG2 face image from CCCD chip is provided, extract and store face template
+    // If DG2 face image from CCCD chip is provided, store it and try to extract face template
     let dg2FaceEnrolled = false;
     if (data.dg2FaceImage) {
       try {
         const faceImageBuffer = Buffer.from(data.dg2FaceImage, 'base64');
-        const faceResult = await this.faceRecognitionClient.enrollFace(
-          faceImageBuffer,
-          'cccd_dg2_face.jpg',
-        );
 
-        // Store the CCCD face embedding as the reference template
-        const sourceImageHash = crypto
-          .createHash('sha256')
-          .update(faceImageBuffer)
-          .digest('hex');
+        // Save DG2 face photo to disk and files table for future display
+        await this.saveDg2FacePhoto(subject.id, faceImageBuffer, userId);
 
-        await this.biometricService.enrollFaceTemplate({
-          subjectId: subject.id,
-          embedding: faceResult.embedding,
-          embeddingVersion: faceResult.embedding_version,
-          sourceImageHash,
-          qualityScore: faceResult.quality_score,
-        });
+        // Try to extract face embedding via Python service
+        try {
+          const faceResult = await this.faceRecognitionClient.enrollFace(
+            faceImageBuffer,
+            'cccd_dg2_face.jpg',
+          );
 
-        dg2FaceEnrolled = true;
-        this.logger.log(
-          `DG2 face template enrolled for subject ${subject.id} (quality=${faceResult.quality_score})`,
-        );
+          const sourceImageHash = crypto
+            .createHash('sha256')
+            .update(faceImageBuffer)
+            .digest('hex');
+
+          await this.biometricService.enrollFaceTemplate({
+            subjectId: subject.id,
+            embedding: faceResult.embedding,
+            embeddingVersion: faceResult.embedding_version,
+            sourceImageHash,
+            qualityScore: faceResult.quality_score,
+          });
+
+          dg2FaceEnrolled = true;
+          this.logger.log(
+            `DG2 face template enrolled for subject ${subject.id} (quality=${faceResult.quality_score})`,
+          );
+        } catch (faceErr: any) {
+          // Face service might not be running — photo is saved, template will be created from selfie
+          this.logger.warn(
+            `DG2 face embedding extraction failed for subject ${subject.id}: ${faceErr.message}. Photo saved, will use selfie instead.`,
+          );
+        }
       } catch (e: any) {
-        // DG2 face enrollment is optional — log but don't block
         this.logger.warn(
-          `DG2 face enrollment failed for subject ${subject.id}: ${e.message}. Will use selfie enrollment instead.`,
+          `DG2 face image processing failed for subject ${subject.id}: ${e.message}`,
         );
       }
     }
@@ -235,9 +271,16 @@ export class EnrollmentService {
       faceResult = await this.faceRecognitionClient.enrollFace(imageBuffer, filename);
     } catch (error: any) {
       this.logger.error(`Face service error: ${error.message}`);
+      // Distinguish between service-down and processing errors
+      const isConnectionError =
+        error.message?.includes('ECONNREFUSED') ||
+        error.message?.includes('fetch failed') ||
+        error.cause?.code === 'ECONNREFUSED';
       throw new BadRequestException({
         code: ErrorCodes.FACE_ENROLLMENT_FAILED,
-        message: error.message || 'Không thể xử lý ảnh khuôn mặt. Vui lòng thử lại.',
+        message: isConnectionError
+          ? 'Dịch vụ nhận diện khuôn mặt chưa sẵn sàng. Vui lòng liên hệ quản trị viên.'
+          : (error.message || 'Không thể xử lý ảnh khuôn mặt. Vui lòng thử lại.'),
       });
     }
 
@@ -304,10 +347,28 @@ export class EnrollmentService {
   }
 
   /**
-   * Complete enrollment: verify NFC + Face + Device are done, transition lifecycle.
+   * Step 4 (Subject): Submit enrollment for officer review.
+   * Verifies NFC + Face + Device are done, then transitions:
+   *   ENROLLMENT → DANG_CHO_PHE_DUYET
+   * Notifies all officers in the subject's area.
    */
   async completeEnrollment(userId: string) {
     const subject = await this.findSubjectByUserId(userId);
+
+    // Guard: only ENROLLMENT lifecycle can submit for approval.
+    // DANG_CHO_PHE_DUYET = already submitted, DANG_QUAN_LY = already approved.
+    if (subject.lifecycle === SubjectLifecycle.DANG_CHO_PHE_DUYET) {
+      throw new BadRequestException({
+        code: ErrorCodes.INVALID_LIFECYCLE_STATE,
+        message: 'Hồ sơ đã được gửi đi và đang chờ cán bộ phê duyệt.',
+      });
+    }
+    if (subject.lifecycle !== SubjectLifecycle.ENROLLMENT) {
+      throw new BadRequestException({
+        code: ErrorCodes.INVALID_LIFECYCLE_STATE,
+        message: 'Không thể gửi đăng ký ở trạng thái hiện tại.',
+      });
+    }
 
     const status = await this.biometricService.getEnrollmentStatus(subject.id);
 
@@ -333,22 +394,355 @@ export class EnrollmentService {
       });
     }
 
-    // Transition lifecycle: ENROLLMENT → DANG_QUAN_LY
+    const now = new Date();
+
+    // ENROLLMENT → DANG_CHO_PHE_DUYET (pending officer approval)
     await this.subjectRepository.update(subject.id, {
-      lifecycle: SubjectLifecycle.DANG_QUAN_LY,
+      lifecycle: SubjectLifecycle.DANG_CHO_PHE_DUYET,
+      submittedAt: now,
+      approvedById: null,
+      approvedAt: null,
+      approvalNote: null,
+      rejectionNote: null,
     });
 
     this.logger.log(
-      `Enrollment complete for subject ${subject.id}. Lifecycle → DANG_QUAN_LY`,
+      `Enrollment submitted for subject ${subject.id}. Lifecycle → DANG_CHO_PHE_DUYET`,
+    );
+
+    // Notify officers in the subject's area
+    await this.notifyOfficersForApproval(subject);
+
+    return {
+      lifecycle: SubjectLifecycle.DANG_CHO_PHE_DUYET,
+      message: 'Hồ sơ sinh trắc học đã được gửi để cán bộ xét duyệt. Vui lòng chờ thông báo.',
+    };
+  }
+
+  // ── Officer Approval API ───────────────────────────────────
+
+  /**
+   * List subjects pending enrollment approval, scoped to the officer's area.
+   *
+   * Access rules:
+   *   DISTRICT scope  → only subjects whose area_id = officer.area_id
+   *   PROVINCE scope  → subjects in province + all child districts
+   *   SYSTEM scope    → all pending subjects (IT_ADMIN)
+   */
+  async getPendingApprovals(officerUserId: string) {
+    const officer = await this.findUserById(officerUserId);
+    const areaIds = await this.areasService.resolveAreaIds(
+      officer.data_scope_level as DataScopeLevel,
+      officer.area_id,
+    );
+
+    const qb = this.subjectRepository
+      .createQueryBuilder('s')
+      .select([
+        's.id', 's.code', 's.fullName', 's.areaId',
+        's.lifecycle', 's.submittedAt', 's.enrollmentDate',
+      ])
+      .where('s.lifecycle = :lc', { lc: SubjectLifecycle.DANG_CHO_PHE_DUYET })
+      .andWhere('s.deleted_at IS NULL')
+      .orderBy('s.submitted_at', 'ASC');
+
+    if (areaIds !== null) {
+      qb.andWhere('s.area_id IN (:...areaIds)', { areaIds });
+    }
+
+    const subjects = await qb.getMany();
+    return {
+      total: subjects.length,
+      items: subjects,
+    };
+  }
+
+  /**
+   * Approve a subject's enrollment.
+   * Transitions: DANG_CHO_PHE_DUYET → DANG_QUAN_LY
+   *
+   * Only officers whose area scope covers the subject's area can approve.
+   * IT_ADMIN (SYSTEM scope) can approve any subject.
+   */
+  async approveEnrollment(
+    subjectId: string,
+    officerUserId: string,
+    note?: string,
+  ) {
+    const [subject, officer] = await Promise.all([
+      this.findSubjectById(subjectId),
+      this.findUserById(officerUserId),
+    ]);
+
+    if (subject.lifecycle !== SubjectLifecycle.DANG_CHO_PHE_DUYET) {
+      throw new BadRequestException({
+        code: ErrorCodes.INVALID_LIFECYCLE_STATE,
+        message: 'Hồ sơ này không ở trạng thái chờ phê duyệt.',
+      });
+    }
+
+    await this.checkOfficerAreaScope(officer, subject.areaId);
+
+    const now = new Date();
+    await this.subjectRepository.update(subjectId, {
+      lifecycle: SubjectLifecycle.DANG_QUAN_LY,
+      approvedById: officerUserId,
+      approvedAt: now,
+      approvalNote: note ?? null,
+      rejectionNote: null,
+    });
+
+    this.logger.log(
+      `Enrollment APPROVED for subject ${subjectId} by officer ${officerUserId}`,
+    );
+
+    // Notify subject
+    await this.notifySubject(
+      subject,
+      'ENROLLMENT_APPROVED',
+      'Đăng ký sinh trắc học được duyệt',
+      'Hồ sơ của bạn đã được cán bộ phê duyệt. Tài khoản đã được kích hoạt.',
     );
 
     return {
       lifecycle: SubjectLifecycle.DANG_QUAN_LY,
-      message: 'Hoàn tất đăng ký sinh trắc học. Tài khoản đã được kích hoạt đầy đủ.',
+      approvedAt: now,
+      message: `Đã phê duyệt đăng ký sinh trắc học cho ${subject.fullName}.`,
+    };
+  }
+
+  /**
+   * Reject a subject's enrollment.
+   * Transitions: DANG_CHO_PHE_DUYET → ENROLLMENT
+   * The subject must redo enrollment (typically re-capture face/NFC).
+   */
+  async rejectEnrollment(
+    subjectId: string,
+    officerUserId: string,
+    note: string,
+  ) {
+    const [subject, officer] = await Promise.all([
+      this.findSubjectById(subjectId),
+      this.findUserById(officerUserId),
+    ]);
+
+    if (subject.lifecycle !== SubjectLifecycle.DANG_CHO_PHE_DUYET) {
+      throw new BadRequestException({
+        code: ErrorCodes.INVALID_LIFECYCLE_STATE,
+        message: 'Hồ sơ này không ở trạng thái chờ phê duyệt.',
+      });
+    }
+
+    await this.checkOfficerAreaScope(officer, subject.areaId);
+
+    const now = new Date();
+    await this.subjectRepository.update(subjectId, {
+      lifecycle: SubjectLifecycle.ENROLLMENT,
+      approvedById: officerUserId,
+      approvedAt: now,
+      rejectionNote: note,
+      approvalNote: null,
+    });
+
+    this.logger.log(
+      `Enrollment REJECTED for subject ${subjectId} by officer ${officerUserId}. Note: ${note}`,
+    );
+
+    // Notify subject
+    await this.notifySubject(
+      subject,
+      'ENROLLMENT_REJECTED',
+      'Đăng ký sinh trắc học bị từ chối',
+      `Hồ sơ của bạn bị từ chối. Lý do: ${note}. Vui lòng thực hiện lại đăng ký.`,
+    );
+
+    return {
+      lifecycle: SubjectLifecycle.ENROLLMENT,
+      rejectedAt: now,
+      message: `Đã từ chối đăng ký của ${subject.fullName}. Đối tượng cần thực hiện lại.`,
     };
   }
 
   // ── Private helpers ────────────────────────────────────────
+
+  /**
+   * Save the DG2 face photo from CCCD chip as a file for later display.
+   */
+  private async saveDg2FacePhoto(
+    subjectId: string,
+    imageBuffer: Buffer,
+    userId: string,
+  ): Promise<void> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    const uploadDir = path.join(process.cwd(), 'uploads', 'subjects', subjectId);
+    await fs.mkdir(uploadDir, { recursive: true });
+
+    const storedName = `cccd_dg2_face_${Date.now()}.jpg`;
+    const storedPath = path.join(uploadDir, storedName);
+    await fs.writeFile(storedPath, imageBuffer);
+
+    const relativePath = `/uploads/subjects/${subjectId}/${storedName}`;
+
+    // Store in files table as FACE_PHOTO, public for subject to view
+    await this.dataSource.query(
+      `INSERT INTO files (original_name, stored_path, mime_type, size, file_type, entity_type, entity_id, uploaded_by_id, is_public)
+       VALUES ($1, $2, $3, $4, 'FACE_PHOTO', 'SUBJECT', $5, $6, true)`,
+      [
+        'Ảnh chân dung CCCD',
+        relativePath,
+        'image/jpeg',
+        imageBuffer.length,
+        subjectId,
+        userId,
+      ],
+    );
+
+    this.logger.log(`DG2 face photo saved for subject ${subjectId}: ${relativePath}`);
+  }
+
+  /**
+   * Find a subject by its primary UUID (used by officer approval endpoints).
+   */
+  private async findSubjectById(subjectId: string): Promise<Subject> {
+    const subject = await this.subjectRepository.findOne({
+      where: { id: subjectId },
+    });
+    if (!subject) {
+      throw new NotFoundException({
+        code: ErrorCodes.SUBJECT_NOT_FOUND,
+        message: 'Không tìm thấy hồ sơ đối tượng',
+      });
+    }
+    return subject;
+  }
+
+  /**
+   * Fetch a user row (officers) by their user account ID.
+   */
+  private async findUserById(userId: string) {
+    const rows = await this.dataSource.query(
+      `SELECT id, area_id, data_scope_level, role FROM users WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
+      [userId],
+    );
+    if (!rows.length) {
+      throw new NotFoundException({ message: 'Không tìm thấy tài khoản cán bộ' });
+    }
+    return rows[0] as { id: string; area_id: string | null; data_scope_level: string; role: string };
+  }
+
+  /**
+   * Verify the officer's area scope covers the given subjectAreaId.
+   * Throws ForbiddenException if outside scope.
+   */
+  private async checkOfficerAreaScope(
+    officer: { area_id: string | null; data_scope_level: string; role: string },
+    subjectAreaId: string,
+  ): Promise<void> {
+    const areaIds = await this.areasService.resolveAreaIds(
+      officer.data_scope_level as DataScopeLevel,
+      officer.area_id,
+    );
+
+    // null means SYSTEM scope → access to all areas
+    if (areaIds === null) return;
+
+    if (!areaIds.includes(subjectAreaId)) {
+      throw new ForbiddenException({
+        code: ErrorCodes.FORBIDDEN,
+        message: 'Bạn không có quyền phê duyệt hồ sơ thuộc khu vực này.',
+      });
+    }
+  }
+
+  /**
+   * Notify all eligible officers in the subject's area when enrollment is submitted.
+   * Officers who can approve:
+   *   - IT_ADMIN (SYSTEM scope): always notified
+   *   - CAN_BO_QUAN_LY / LANH_DAO with DISTRICT scope: area_id = subject.area_id
+   *   - CAN_BO_QUAN_LY / LANH_DAO with PROVINCE scope: province covers subject's district
+   */
+  private async notifyOfficersForApproval(subject: Subject): Promise<void> {
+    try {
+      const officerIds: { id: string }[] = await this.dataSource.query(
+        `SELECT u.id
+         FROM users u
+         WHERE u.deleted_at IS NULL
+           AND u.status = 'ACTIVE'
+           AND u.role IN ('IT_ADMIN', 'LANH_DAO', 'CAN_BO_QUAN_LY')
+           AND (
+             u.data_scope_level = 'SYSTEM'
+             OR (u.data_scope_level = 'DISTRICT' AND u.area_id = $1)
+             OR (u.data_scope_level = 'PROVINCE' AND u.area_id IN (
+                   SELECT id FROM areas WHERE id = $1
+                   UNION
+                   SELECT parent_id FROM areas WHERE id = $1 AND parent_id IS NOT NULL
+                 ))
+           )`,
+        [subject.areaId],
+      );
+
+      if (!officerIds.length) {
+        this.logger.warn(
+          `No eligible officers found for area ${subject.areaId} to notify about subject ${subject.id}`,
+        );
+        return;
+      }
+
+      // Insert one notification per officer (4 params each: user_id, title, message, entity_id)
+      const values = officerIds
+        .map(
+          (_, i) =>
+            `(uuid_generate_v4(), $${i * 4 + 1}, 'ENROLLMENT_PENDING', $${i * 4 + 2}, $${i * 4 + 3}, 'SUBJECT', $${i * 4 + 4}, 'WEB', false, NOW())`,
+        )
+        .join(', ');
+
+      const params: string[] = [];
+      for (const o of officerIds) {
+        params.push(
+          o.id,
+          'Hồ sơ sinh trắc học chờ phê duyệt',
+          `${subject.fullName} (${subject.code}) đã hoàn thành đăng ký sinh trắc học và chờ phê duyệt.`,
+          subject.id,
+        );
+      }
+
+      await this.dataSource.query(
+        `INSERT INTO notifications (id, user_id, type, title, message, entity_type, entity_id, channel, is_read, created_at)
+         VALUES ${values}`,
+        params,
+      );
+
+      this.logger.log(
+        `Notified ${officerIds.length} officer(s) about pending enrollment for subject ${subject.id}`,
+      );
+    } catch (e: any) {
+      // Non-critical — don't fail enrollment submission if notification fails
+      this.logger.warn(`Failed to send enrollment notifications: ${e.message}`);
+    }
+  }
+
+  /**
+   * Notify the subject's linked user account about approval/rejection result.
+   */
+  private async notifySubject(
+    subject: Subject,
+    type: string,
+    title: string,
+    message: string,
+  ): Promise<void> {
+    if (!subject.userAccountId) return;
+    try {
+      await this.dataSource.query(
+        `INSERT INTO notifications (id, user_id, type, title, message, entity_type, entity_id, channel, is_read, created_at)
+         VALUES (uuid_generate_v4(), $1, $2, $3, $4, 'SUBJECT', $5, 'WEB', false, NOW())`,
+        [subject.userAccountId, type, title, message, subject.id],
+      );
+    } catch (e: any) {
+      this.logger.warn(`Failed to notify subject ${subject.id}: ${e.message}`);
+    }
+  }
 
   private async findSubjectByUserId(userId: string): Promise<Subject> {
     const subject = await this.subjectRepository.findOne({

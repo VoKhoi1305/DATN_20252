@@ -3,6 +3,7 @@ package com.example.smtts.ui.checkin
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -35,11 +36,12 @@ import com.example.smtts.databinding.ActivityCheckinBinding
 import com.example.smtts.nfc.CccdNfcReader
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
+
 import java.security.Security
 
 /**
@@ -68,6 +70,10 @@ class CheckinActivity : BaseNfcActivity() {
         if (granted) startCamera()
         else showSnackbar("Can quyen camera de chup anh khuon mat")
     }
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* GPS collected on-demand; no action needed here */ }
 
     // ── Lifecycle ──────────────────────────────────────────
 
@@ -99,6 +105,12 @@ class CheckinActivity : BaseNfcActivity() {
 
         setupUI()
         observeState()
+
+        // Pre-request location permission so GPS is available when submitting
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED) {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
 
         // Check if BAC data is available
         if (!viewModel.hasBacData()) {
@@ -210,6 +222,12 @@ class CheckinActivity : BaseNfcActivity() {
 
             is CheckinUiState.NfcSuccess -> {
                 showNfcResult(state.chipData)
+
+                // Auto-advance to face capture after 1.5s
+                lifecycleScope.launch {
+                    delay(1500)
+                    viewModel.goToFaceStep()
+                }
             }
 
             is CheckinUiState.SubmitSuccess -> {
@@ -299,14 +317,19 @@ class CheckinActivity : BaseNfcActivity() {
                 binding.progressNfcRead.visibility = View.GONE
                 binding.tvCheckinNfcStatus.text = getString(R.string.checkin_nfc_waiting)
                 showSnackbar(e.message ?: getString(R.string.enrollment_nfc_error))
+                // Log failure to backend immediately
+                viewModel.logNfcFailure(this@CheckinActivity, "NFC_READ_ERROR")
             } catch (e: SecurityException) {
                 binding.progressNfcRead.visibility = View.GONE
                 binding.tvCheckinNfcStatus.text = getString(R.string.checkin_nfc_waiting)
                 showSnackbar(e.message ?: "Canh bao: Phat hien the CCCD khong hop le!")
+                // Security exception = passive auth failed / suspected cloned card — critical event
+                viewModel.logNfcFailure(this@CheckinActivity, "PASSIVE_AUTH_FAILED")
             } catch (e: Exception) {
                 binding.progressNfcRead.visibility = View.GONE
                 binding.tvCheckinNfcStatus.text = getString(R.string.checkin_nfc_waiting)
                 showSnackbar("Loi doc NFC: ${e.message}")
+                viewModel.logNfcFailure(this@CheckinActivity, "NFC_EXCEPTION")
             }
         }
     }
@@ -412,43 +435,23 @@ class CheckinActivity : BaseNfcActivity() {
 
     private fun imageProxyToJpegBytes(image: ImageProxy): ByteArray? {
         return try {
-            val planes = image.planes
-            val yBuffer: ByteBuffer = planes[0].buffer
-            val uBuffer: ByteBuffer = planes[1].buffer
-            val vBuffer: ByteBuffer = planes[2].buffer
-
-            val ySize = yBuffer.remaining()
-            val uSize = uBuffer.remaining()
-            val vSize = vBuffer.remaining()
-
-            val nv21 = ByteArray(ySize + uSize + vSize)
-            yBuffer.get(nv21, 0, ySize)
-            vBuffer.get(nv21, ySize, vSize)
-            uBuffer.get(nv21, ySize + vSize, uSize)
-
-            val yuvImage = android.graphics.YuvImage(
-                nv21, android.graphics.ImageFormat.NV21,
-                image.width, image.height, null
-            )
-            val stream = ByteArrayOutputStream()
-            yuvImage.compressToJpeg(
-                android.graphics.Rect(0, 0, image.width, image.height), 90, stream
-            )
-            val jpegBytes = stream.toByteArray()
+            // ImageCapture returns JPEG format — single plane
+            val buffer = image.planes[0].buffer
+            val jpegBytes = ByteArray(buffer.remaining())
+            buffer.get(jpegBytes)
 
             val rotation = image.imageInfo.rotationDegrees
-            if (rotation != 0) {
-                val bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
-                val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
-                val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                val rotatedStream = ByteArrayOutputStream()
-                rotated.compress(Bitmap.CompressFormat.JPEG, 90, rotatedStream)
-                bitmap.recycle()
-                rotated.recycle()
-                rotatedStream.toByteArray()
-            } else {
-                jpegBytes
+            val bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
+            val matrix = Matrix().apply {
+                if (rotation != 0) postRotate(rotation.toFloat())
+                postScale(-1f, 1f) // horizontal mirror for front camera
             }
+            val corrected = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            val stream = ByteArrayOutputStream()
+            corrected.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+            bitmap.recycle()
+            corrected.recycle()
+            stream.toByteArray()
         } catch (e: Exception) {
             Log.e(TAG, "Image conversion failed", e)
             null

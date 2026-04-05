@@ -10,8 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.smtts.R
 import com.example.smtts.data.api.ApiClient
 import com.example.smtts.data.local.TokenManager
@@ -54,11 +56,13 @@ class DeviceActivity : AppCompatActivity() {
 
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is DeviceUiState.Loading -> showLoading()
-                    is DeviceUiState.Success -> showDevices(state.current, state.history)
-                    is DeviceUiState.Error -> showError(state.message)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is DeviceUiState.Loading -> showLoading()
+                        is DeviceUiState.Success -> showDevices(state.current, state.history)
+                        is DeviceUiState.Error -> showError(state.message)
+                    }
                 }
             }
         }

@@ -300,6 +300,131 @@ export class SubjectsService {
   }
 
   // =========================================================================
+  // Subject self-access (mobile app)
+  // =========================================================================
+
+  /**
+   * Get the current subject's own profile by their user account ID.
+   * No area scope check needed — subjects can always view their own data.
+   */
+  async findMe(userId: string) {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    const subject = await this.subjectRepo.findOne({
+      where: { userAccountId: userId },
+      relations: ['area'],
+    });
+    if (!subject) {
+      throw new NotFoundException({
+        code: 'SUBJECT_NOT_FOUND',
+        message: 'Không tìm thấy hồ sơ đối tượng liên kết với tài khoản này',
+      });
+    }
+
+    // No scope check — self-access is always allowed
+
+    const shouldMask = true; // subjects always see masked CCCD
+
+    const family = await this.familyRepo.findOneBy({ subjectId: subject.id });
+    const legal = await this.legalRepo.findOneBy({ subjectId: subject.id });
+
+    const assignment = await this.assignmentRepo.findOne({
+      where: { subjectId: subject.id, status: 'ACTIVE' as any },
+    });
+    let scenario: ManagementScenario | null = null;
+    if (assignment) {
+      scenario = await this.scenarioRepo.findOneBy({ id: assignment.scenarioId });
+    }
+
+    const officer = await this.userRepo.findOne({
+      where: { id: subject.createdById },
+      select: ['id', 'fullName'],
+    });
+
+    return {
+      id: subject.id,
+      ma_ho_so: subject.code,
+      full_name: subject.fullName,
+      cccd: this.formatCccd(subject.cccdEncrypted, shouldMask),
+      date_of_birth: subject.dateOfBirth,
+      gender: subject.gender,
+      ethnicity: subject.ethnicity,
+      address: subject.address,
+      permanent_address: subject.permanentAddress,
+      phone: subject.phone,
+      photo_url: subject.photoUrl,
+      area: subject.area
+        ? { id: subject.area.id, name: subject.area.name, level: subject.area.level }
+        : null,
+      status: LIFECYCLE_REVERSE_MAP[subject.lifecycle] ?? subject.lifecycle,
+      lifecycle: subject.lifecycle,
+      compliance_rate: subject.complianceRate,
+      enrollment_date: subject.enrollmentDate,
+      notes: subject.notes,
+      custom_fields: subject.customFields,
+      officer: officer ? { id: officer.id, full_name: officer.fullName } : null,
+      scenario: scenario
+        ? {
+            id: scenario.id,
+            name: scenario.name,
+            checkin_frequency: scenario.checkinFrequency,
+            assigned_at: assignment!.assignedAt,
+          }
+        : null,
+      family: family
+        ? {
+            father_name: family.fatherName,
+            mother_name: family.motherName,
+            spouse_name: family.spouseName,
+            dependents: family.dependents,
+            notes: family.familyNotes,
+          }
+        : null,
+      legal: legal
+        ? {
+            decision_number: legal.decisionNumber,
+            decision_date: legal.decisionDate,
+            management_type: legal.managementType,
+            start_date: legal.startDate,
+            end_date: legal.endDate,
+            issuing_authority: legal.issuingAuthority,
+            notes: legal.legalNotes,
+          }
+        : null,
+      created_at: subject.createdAt,
+      updated_at: subject.updatedAt,
+    };
+  }
+
+  /**
+   * Get documents for the current subject (self-access, public docs only).
+   */
+  async getMyDocuments(userId: string) {
+    const subject = await this.subjectRepo.findOne({
+      where: { userAccountId: userId },
+    });
+    if (!subject) {
+      throw new NotFoundException('Không tìm thấy hồ sơ đối tượng');
+    }
+
+    const documents = await this.dataSource.query(
+      `SELECT f.id, f.original_name, f.stored_path, f.mime_type, f.size, f.file_type,
+              f.uploaded_by_id, u.full_name AS uploaded_by_name, f.created_at,
+              COALESCE(f.is_public, false) AS is_public
+       FROM files f
+       LEFT JOIN users u ON u.id = f.uploaded_by_id
+       WHERE f.entity_type = 'SUBJECT' AND f.entity_id = $1
+         AND f.deleted_at IS NULL
+         AND (f.is_public = true OR f.file_type = 'FACE_PHOTO')
+       ORDER BY f.created_at DESC`,
+      [subject.id],
+    );
+
+    return { data: documents };
+  }
+
+  // =========================================================================
   // SCR-021: Subject Detail
   // =========================================================================
 
@@ -826,7 +951,8 @@ export class SubjectsService {
 
     const documents = await this.dataSource.query(
       `SELECT f.id, f.original_name, f.stored_path, f.mime_type, f.size, f.file_type,
-              f.uploaded_by_id, u.full_name AS uploaded_by_name, f.created_at
+              f.uploaded_by_id, u.full_name AS uploaded_by_name, f.created_at,
+              COALESCE(f.is_public, false) AS is_public
        FROM files f
        LEFT JOIN users u ON u.id = f.uploaded_by_id
        WHERE f.entity_type = 'SUBJECT' AND f.entity_id = $1 AND f.deleted_at IS NULL
@@ -846,6 +972,7 @@ export class SubjectsService {
     file: Express.Multer.File,
     fileType: string,
     userId: string,
+    isPublic = false,
   ) {
     const user = await this.userRepo.findOneBy({ id: userId });
     if (!user) throw new NotFoundException('User not found');
@@ -870,9 +997,9 @@ export class SubjectsService {
 
     // Insert record into files table
     const result = await this.dataSource.query(
-      `INSERT INTO files (original_name, stored_path, mime_type, size, file_type, entity_type, entity_id, uploaded_by_id)
-       VALUES ($1, $2, $3, $4, $5, 'SUBJECT', $6, $7)
-       RETURNING id, original_name, stored_path, mime_type, size, file_type, created_at`,
+      `INSERT INTO files (original_name, stored_path, mime_type, size, file_type, entity_type, entity_id, uploaded_by_id, is_public)
+       VALUES ($1, $2, $3, $4, $5, 'SUBJECT', $6, $7, $8)
+       RETURNING id, original_name, stored_path, mime_type, size, file_type, created_at, is_public`,
       [
         file.originalname,
         relativePath,
@@ -881,6 +1008,7 @@ export class SubjectsService {
         fileType,
         subjectId,
         userId,
+        isPublic,
       ],
     );
 

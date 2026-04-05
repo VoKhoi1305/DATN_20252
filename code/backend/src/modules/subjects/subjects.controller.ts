@@ -23,6 +23,25 @@ export class SubjectsController {
     return this.subjectsService.findAll(dto, userId);
   }
 
+  /**
+   * GET /api/v1/subjects/me
+   * Get the current subject's own profile (mobile app self-access).
+   * No area scope check — subjects can always view their own data.
+   */
+  @Get('me')
+  async findMe(@CurrentUser('userId') userId: string) {
+    return this.subjectsService.findMe(userId);
+  }
+
+  /**
+   * GET /api/v1/subjects/me/documents
+   * Get documents visible to the current subject (public docs + face photo).
+   */
+  @Get('me/documents')
+  async getMyDocuments(@CurrentUser('userId') userId: string) {
+    return this.subjectsService.getMyDocuments(userId);
+  }
+
   @Get('scenarios')
   async getScenarios() {
     return this.subjectsService.getActiveScenarios();
@@ -142,10 +161,13 @@ export class SubjectsController {
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('file_type') fileType: string,
+    @Body('is_public') isPublic: string,
     @CurrentUser('userId') userId: string,
   ) {
     if (!file) throw new BadRequestException('File không được để trống');
-    return this.subjectsService.uploadDocument(id, file, fileType || 'OTHER', userId);
+    return this.subjectsService.uploadDocument(
+      id, file, fileType || 'OTHER', userId, isPublic === 'true',
+    );
   }
 
   @Delete(':id/documents/:docId')

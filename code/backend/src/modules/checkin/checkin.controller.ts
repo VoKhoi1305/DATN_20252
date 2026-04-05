@@ -10,6 +10,7 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
 } from '@nestjs/common';
+import { NfcFailureDto } from './dto/nfc-failure.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CheckinService } from './checkin.service';
@@ -66,5 +67,27 @@ export class CheckinController {
       faceImage.buffer,
       faceImage.originalname,
     );
+  }
+
+  /**
+   * POST /api/v1/checkin/nfc-failure
+   * Log a mobile-side NFC read error (chip unreadable, passive auth failed, wrong card).
+   * Called immediately when NFC fails on device — before face capture starts.
+   * Creates an NFC_MISMATCH/FAILED event so the attempt is permanently logged.
+   */
+  @Post('nfc-failure')
+  @HttpCode(HttpStatus.OK)
+  async logNfcFailure(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: NfcFailureDto,
+  ) {
+    return this.checkinService.logNfcFailure(userId, {
+      reason: dto.reason,
+      chipSerial: dto.chipSerial,
+      deviceId: dto.deviceId,
+      gpsLat: dto.gpsLat,
+      gpsLng: dto.gpsLng,
+      clientTimestamp: dto.clientTimestamp,
+    });
   }
 }

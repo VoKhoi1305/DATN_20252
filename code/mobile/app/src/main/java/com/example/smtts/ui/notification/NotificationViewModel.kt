@@ -49,15 +49,23 @@ class NotificationViewModel(private val tokenManager: TokenManager) : ViewModel(
                     page = currentPage, limit = 20
                 )
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val data = response.body()!!.data
-                    if (refresh) allNotifications.clear()
-                    allNotifications.addAll(data.items)
+                    val data = response.body()?.data
+                    if (data != null) {
+                        if (refresh) allNotifications.clear()
+                        allNotifications.addAll(data.items)
 
-                    _uiState.value = NotificationUiState.Success(
-                        notifications = allNotifications.toList(),
-                        unreadCount = data.unreadCount ?: 0,
-                        hasMore = allNotifications.size < data.total
-                    )
+                        _uiState.value = NotificationUiState.Success(
+                            notifications = allNotifications.toList(),
+                            unreadCount = data.unreadCount ?: 0,
+                            hasMore = allNotifications.size < data.total
+                        )
+                    } else {
+                        _uiState.value = NotificationUiState.Success(
+                            notifications = emptyList(),
+                            unreadCount = 0,
+                            hasMore = false
+                        )
+                    }
                 } else {
                     // Backend may not have this endpoint yet — show empty state
                     _uiState.value = NotificationUiState.Success(

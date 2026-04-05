@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import FormData from 'form-data';
 
 /**
  * HTTP client for the Face Recognition Python microservice.
@@ -13,6 +12,12 @@ import FormData from 'form-data';
  * - Consistent accuracy across all devices
  * - Model updates without app releases
  * - Protection of model weights
+ *
+ * NOTE: Uses native fetch + FormData + Blob (Node 18+).
+ * The form-data npm package is intentionally NOT used here because
+ * Node's native fetch cannot correctly stream form-data's Readable output —
+ * the Python FastAPI server receives a body it cannot parse.
+ * Native FormData is handled directly by fetch with the correct boundary.
  */
 
 interface EnrollResult {
@@ -70,21 +75,18 @@ export class FaceRecognitionClient {
    * Sends image to Python service, receives embedding for storage.
    */
   async enrollFace(imageBuffer: Buffer, filename: string): Promise<EnrollResult> {
-    const form = new FormData();
-    form.append('file', imageBuffer, {
-      filename,
-      contentType: 'image/jpeg',
-    });
+    const formData = new FormData();
+    formData.append('file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/jpeg' }), filename);
 
     const response = await fetch(`${this.baseUrl}/enroll`, {
       method: 'POST',
-      body: form as any,
-      headers: form.getHeaders(),
+      body: formData,
+      // Do NOT set Content-Type manually — fetch sets it with the correct boundary
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(`Face enrollment failed: ${error.detail || response.statusText}`);
+      throw new Error(`Face enrollment failed: ${(error as any).detail || response.statusText}`);
     }
 
     return response.json() as Promise<EnrollResult>;
@@ -100,25 +102,21 @@ export class FaceRecognitionClient {
     storedEmbedding: number[],
     threshold?: number,
   ): Promise<VerifyResult> {
-    const form = new FormData();
-    form.append('file', imageBuffer, {
-      filename,
-      contentType: 'image/jpeg',
-    });
-    form.append('stored_embedding', JSON.stringify(storedEmbedding));
+    const formData = new FormData();
+    formData.append('file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/jpeg' }), filename);
+    formData.append('stored_embedding', JSON.stringify(storedEmbedding));
     if (threshold !== undefined) {
-      form.append('threshold', threshold.toString());
+      formData.append('threshold', String(threshold));
     }
 
     const response = await fetch(`${this.baseUrl}/verify-image`, {
       method: 'POST',
-      body: form as any,
-      headers: form.getHeaders(),
+      body: formData,
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(`Face verification failed: ${error.detail || response.statusText}`);
+      throw new Error(`Face verification failed: ${(error as any).detail || response.statusText}`);
     }
 
     return response.json() as Promise<VerifyResult>;
@@ -129,21 +127,17 @@ export class FaceRecognitionClient {
    * Used during check-in to prevent static photo attacks.
    */
   async checkLiveness(imageBuffer: Buffer, filename: string): Promise<LivenessResult> {
-    const form = new FormData();
-    form.append('file', imageBuffer, {
-      filename,
-      contentType: 'image/jpeg',
-    });
+    const formData = new FormData();
+    formData.append('file', new Blob([new Uint8Array(imageBuffer)], { type: 'image/jpeg' }), filename);
 
     const response = await fetch(`${this.baseUrl}/liveness`, {
       method: 'POST',
-      body: form as any,
-      headers: form.getHeaders(),
+      body: formData,
     });
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(`Liveness check failed: ${error.detail || response.statusText}`);
+      throw new Error(`Liveness check failed: ${(error as any).detail || response.statusText}`);
     }
 
     return response.json() as Promise<LivenessResult>;

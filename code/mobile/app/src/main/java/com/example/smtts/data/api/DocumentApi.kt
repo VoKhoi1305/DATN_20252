@@ -12,4 +12,8 @@ interface DocumentApi {
     suspend fun getDocuments(
         @Path("id") subjectId: String
     ): Response<ApiResponse<DocumentListResponse>>
+
+    /** Get documents visible to the current subject (public docs + face photo) */
+    @GET("subjects/me/documents")
+    suspend fun getMyDocuments(): Response<ApiResponse<DocumentListResponse>>
 }

@@ -12,6 +12,7 @@ import {
   Settings,
   SlidersHorizontal,
   TrendingUp,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { getUser } from '@/stores/auth.store';
@@ -36,6 +37,12 @@ const navItems: NavItem[] = [
   { label: MSG.navEscalationRules, icon: <TrendingUp size={16} />, path: '/quy-tac-leo-thang' },
   { label: MSG.navCases, icon: <Briefcase size={16} />, path: '/cases' },
   { label: MSG.navApprovals, icon: <ClipboardCheck size={16} />, path: '/xet-duyet' },
+  {
+    label: MSG.navEnrollmentApprovals,
+    icon: <UserCheck size={16} />,
+    path: '/duyet-dang-ky',
+    roles: ['IT_ADMIN', 'LANH_DAO', 'CAN_BO_QUAN_LY'],
+  },
   { label: MSG.navTrace, icon: <Route size={16} />, path: '/truy-vet' },
   { label: MSG.navMap, icon: <Map size={16} />, path: '/ban-do' },
   { label: MSG.navScenarios, icon: <Clapperboard size={16} />, path: '/kich-ban' },

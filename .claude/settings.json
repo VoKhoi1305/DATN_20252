@@ -8,7 +8,13 @@
       "Bash(PGPASSWORD=smtts_secret_2026 psql -h localhost -p 5434 -U smtts_user -d smtts_main -c \"SELECT COUNT\\(*\\) FROM management_scenarios; SELECT COUNT\\(*\\) FROM scenario_assignments; SELECT COUNT\\(*\\) FROM geofences; SELECT COUNT\\(*\\) FROM events; SELECT COUNT\\(*\\) FROM subject_families; SELECT COUNT\\(*\\) FROM subject_legals; SELECT COUNT\\(*\\) FROM devices; SELECT COUNT\\(*\\) FROM files;\")",
       "Bash(PGPASSWORD=smtts_secret_2026 psql -h localhost -p 5434 -U smtts_user -d smtts_main -f e:/DATN_20252/code/scripts/migrations/010_seed_mobile_test_data.sql)",
       "Bash(psql -h localhost -p 5434 -U smtts_user -d smtts_main -c ':*)",
-      "Read(//e/phu/testCCCDapp/**)"
+      "Read(//e/phu/testCCCDapp/**)",
+      "Bash(./gradlew compileDebugKotlin)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files/Microsoft/**)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Java/jdk-23\" ./gradlew compileDebugKotlin)",
+      "Read(//e/scripts/migrations/**)",
+      "Bash(npx ts-node:*)"
     ]
   }
 }

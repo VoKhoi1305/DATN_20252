@@ -26,20 +26,19 @@ class ProfileViewModel(private val tokenManager: TokenManager) : ViewModel() {
     private val subjectApi = ApiClient.subjectApi
 
     fun loadProfile() {
-        val user = tokenManager.getUser() ?: run {
-            _uiState.value = ProfileUiState.Error("USER_NOT_FOUND")
-            return
-        }
-
         _uiState.value = ProfileUiState.Loading
 
         viewModelScope.launch {
             try {
-                val profileResponse = subjectApi.getSubjectDetail(user.id)
+                val profileResponse = subjectApi.getMyProfile()
 
                 if (profileResponse.isSuccessful && profileResponse.body()?.success == true) {
-                    val profile = profileResponse.body()!!.data
-                    _uiState.value = ProfileUiState.Success(profile)
+                    val profile = profileResponse.body()?.data
+                    if (profile != null) {
+                        _uiState.value = ProfileUiState.Success(profile)
+                    } else {
+                        _uiState.value = ProfileUiState.Error("LOAD_FAILED")
+                    }
                 } else {
                     _uiState.value = ProfileUiState.Error("LOAD_FAILED")
                 }

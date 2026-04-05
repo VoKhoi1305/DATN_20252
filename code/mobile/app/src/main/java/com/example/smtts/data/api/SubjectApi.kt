@@ -12,4 +12,8 @@ interface SubjectApi {
     suspend fun getSubjectDetail(
         @Path("id") id: String
     ): Response<ApiResponse<SubjectProfile>>
+
+    /** Get the current subject's own profile (no area scope check) */
+    @GET("subjects/me")
+    suspend fun getMyProfile(): Response<ApiResponse<SubjectProfile>>
 }

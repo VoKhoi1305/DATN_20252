@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # ArcFace cosine similarity: >0.45 is typically a match
 
     # Anti-spoofing / Liveness
-    liveness_threshold: float = 0.5  # Score above this = real face
+    liveness_threshold: float = 0.38  # Score above this = real face (calibrated for mobile JPEG)
     enable_liveness: bool = True
 
     # Limits

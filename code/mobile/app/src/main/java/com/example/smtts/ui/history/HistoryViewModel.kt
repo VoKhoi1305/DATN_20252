@@ -78,7 +78,7 @@ class HistoryViewModel(private val tokenManager: TokenManager) : ViewModel() {
                 )
 
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val events = response.body()!!.data.data
+                    val events = response.body()?.data?.data ?: emptyList()
                     val calendarDays = buildCalendarDays(year, month, lastDay, events)
 
                     val countSuccess = calendarDays.count { it.status == "SUCCESS" }

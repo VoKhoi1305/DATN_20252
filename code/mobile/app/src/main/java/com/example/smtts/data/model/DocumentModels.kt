@@ -13,7 +13,8 @@ data class DocumentInfo(
     @SerializedName("file_type") val fileType: String?,
     @SerializedName("uploaded_by_id") val uploadedById: String?,
     @SerializedName("uploaded_by_name") val uploadedByName: String?,
-    @SerializedName("created_at") val createdAt: String?
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("is_public") val isPublic: Boolean = false
 )
 
 // ── Document List Response ──

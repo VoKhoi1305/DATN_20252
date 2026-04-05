@@ -2,9 +2,11 @@ import {
   Controller,
   Get,
   Post,
+  Param,
   Body,
   HttpCode,
   HttpStatus,
+  UseGuards,
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
@@ -13,6 +15,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserRole } from '../users/entities/user.entity';
 import { EnrollmentService } from './enrollment.service';
 import { EnrollNfcDto } from './dto/enroll-nfc.dto';
 import { EnrollDeviceDto } from '../devices/dto/enroll-device.dto';
@@ -113,12 +118,67 @@ export class EnrollmentController {
 
   /**
    * POST /api/v1/enrollment/complete
-   * Finalize enrollment after NFC + Face + Device are done.
-   * Transitions subject lifecycle: ENROLLMENT → DANG_QUAN_LY
+   * Subject submits enrollment for officer review.
+   * Transitions: ENROLLMENT → DANG_CHO_PHE_DUYET
+   * Notifies officers in the subject's area.
    */
   @Post('complete')
   @HttpCode(HttpStatus.OK)
   async completeEnrollment(@CurrentUser('userId') userId: string) {
     return this.enrollmentService.completeEnrollment(userId);
+  }
+
+  // ── Officer Approval Endpoints ─────────────────────────────
+  // Access: CAN_BO_QUAN_LY, LANH_DAO, IT_ADMIN only.
+  // Area scope enforced inside service (DISTRICT / PROVINCE / SYSTEM).
+
+  /**
+   * GET /api/v1/enrollment/pending
+   * List subjects waiting for enrollment approval, filtered to the officer's area.
+   *
+   *   DISTRICT scope → only subjects in officer's district
+   *   PROVINCE scope → subjects in province + all child districts
+   *   SYSTEM scope   → all pending subjects (IT_ADMIN)
+   */
+  @Get('pending')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.IT_ADMIN, UserRole.LANH_DAO, UserRole.CAN_BO_QUAN_LY)
+  async getPendingApprovals(@CurrentUser('userId') officerUserId: string) {
+    return this.enrollmentService.getPendingApprovals(officerUserId);
+  }
+
+  /**
+   * POST /api/v1/enrollment/:subjectId/approve
+   * Approve a subject's enrollment.
+   * Transitions: DANG_CHO_PHE_DUYET → DANG_QUAN_LY
+   * Subject receives a notification.
+   */
+  @Post(':subjectId/approve')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.IT_ADMIN, UserRole.LANH_DAO, UserRole.CAN_BO_QUAN_LY)
+  async approveEnrollment(
+    @Param('subjectId') subjectId: string,
+    @Body('note') note: string | undefined,
+    @CurrentUser('userId') officerUserId: string,
+  ) {
+    return this.enrollmentService.approveEnrollment(subjectId, officerUserId, note);
+  }
+
+  /**
+   * POST /api/v1/enrollment/:subjectId/reject
+   * Reject a subject's enrollment (sends back to ENROLLMENT state).
+   * A rejection note is required so the subject knows what to fix.
+   */
+  @Post(':subjectId/reject')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.IT_ADMIN, UserRole.LANH_DAO, UserRole.CAN_BO_QUAN_LY)
+  async rejectEnrollment(
+    @Param('subjectId') subjectId: string,
+    @Body('note') note: string,
+    @CurrentUser('userId') officerUserId: string,
+  ) {
+    return this.enrollmentService.rejectEnrollment(subjectId, officerUserId, note);
   }
 }

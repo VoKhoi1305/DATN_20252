@@ -29,18 +29,13 @@ class DocumentViewModel(private val tokenManager: TokenManager) : ViewModel() {
     private val documentApi = ApiClient.documentApi
 
     fun loadDocuments() {
-        val user = tokenManager.getUser() ?: run {
-            _uiState.value = DocumentUiState.Error("USER_NOT_FOUND")
-            return
-        }
-
         _uiState.value = DocumentUiState.Loading
 
         viewModelScope.launch {
             try {
-                val response = documentApi.getDocuments(user.id)
+                val response = documentApi.getMyDocuments()
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val docs = response.body()!!.data.data
+                    val docs = response.body()?.data?.data ?: emptyList()
                     val legal = docs.filter { isLegalDoc(it) }
                     val photos = docs.filter { isPhotoDoc(it) }
                     _uiState.value = DocumentUiState.Success(
@@ -56,10 +51,7 @@ class DocumentViewModel(private val tokenManager: TokenManager) : ViewModel() {
             } catch (e: IOException) {
                 _uiState.value = DocumentUiState.Error("NETWORK_ERROR")
             } catch (e: Exception) {
-                _uiState.value = DocumentUiState.Success(
-                    legalDocs = emptyList(),
-                    photoDocs = emptyList()
-                )
+                _uiState.value = DocumentUiState.Error("SYSTEM_ERROR")
             }
         }
     }

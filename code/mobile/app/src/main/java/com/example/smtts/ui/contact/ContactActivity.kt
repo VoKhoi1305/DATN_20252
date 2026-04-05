@@ -11,8 +11,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.snackbar.Snackbar
 import com.example.smtts.R
 import com.example.smtts.data.api.ApiClient
 import com.example.smtts.data.local.TokenManager
@@ -55,11 +58,13 @@ class ContactActivity : AppCompatActivity() {
 
     private fun observeState() {
         lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is ContactUiState.Loading -> showLoading()
-                    is ContactUiState.Success -> showContact(state.officer, state.area)
-                    is ContactUiState.Error -> showError(state.message)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is ContactUiState.Loading -> showLoading()
+                        is ContactUiState.Success -> showContact(state.officer, state.area)
+                        is ContactUiState.Error -> showError(state.message)
+                    }
                 }
             }
         }
@@ -97,7 +102,15 @@ class ContactActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnCallHotline).setOnClickListener {
             val intent = Intent(Intent.ACTION_DIAL)
             intent.data = Uri.parse("tel:19001234")
-            startActivity(intent)
+            try {
+                startActivity(intent)
+            } catch (e: android.content.ActivityNotFoundException) {
+                Snackbar.make(
+                    findViewById(R.id.main),
+                    getString(R.string.error_system),
+                    Snackbar.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 

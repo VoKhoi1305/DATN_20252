@@ -37,11 +37,12 @@ import com.example.smtts.databinding.ActivityEnrollmentBinding
 import com.example.smtts.nfc.CccdNfcReader
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
+
 import java.security.Security
 import android.text.Editable
 import android.text.TextWatcher
@@ -278,7 +279,7 @@ class EnrollmentActivity : BaseNfcActivity() {
             }
 
             is EnrollmentUiState.NfcSubmitSuccess -> {
-                // Server accepted NFC data — show next button
+                // Server accepted NFC data — show result then auto-advance
                 binding.btnNfcSubmit.visibility = View.GONE
                 binding.btnNfcNext.visibility = View.VISIBLE
                 binding.tvNfcStatus.text = if (state.dg2FaceEnrolled) {
@@ -288,6 +289,12 @@ class EnrollmentActivity : BaseNfcActivity() {
                 }
                 binding.tvNfcStatus.setTextColor(getColor(R.color.smtts_green_700))
                 showSnackbar(state.message)
+
+                // Auto-advance to face capture after 1.5s
+                lifecycleScope.launch {
+                    delay(1500)
+                    viewModel.goToStep(EnrollmentStep.FACE_CAPTURE)
+                }
             }
 
             is EnrollmentUiState.FaceSuccess -> {
@@ -603,53 +610,28 @@ class EnrollmentActivity : BaseNfcActivity() {
     }
 
     /**
-     * Convert ImageProxy (YUV_420_888) to JPEG bytes for upload to server.
+     * Convert ImageProxy (JPEG from ImageCapture) to JPEG bytes for upload.
+     * Applies rotation + horizontal mirror for front camera.
      */
     private fun imageProxyToJpegBytes(image: ImageProxy): ByteArray? {
         return try {
-            val planes = image.planes
-            val yBuffer: ByteBuffer = planes[0].buffer
-            val uBuffer: ByteBuffer = planes[1].buffer
-            val vBuffer: ByteBuffer = planes[2].buffer
+            // ImageCapture returns JPEG format — single plane
+            val buffer = image.planes[0].buffer
+            val jpegBytes = ByteArray(buffer.remaining())
+            buffer.get(jpegBytes)
 
-            val ySize = yBuffer.remaining()
-            val uSize = uBuffer.remaining()
-            val vSize = vBuffer.remaining()
-
-            val nv21 = ByteArray(ySize + uSize + vSize)
-            yBuffer.get(nv21, 0, ySize)
-            vBuffer.get(nv21, ySize, vSize)
-            uBuffer.get(nv21, ySize + vSize, uSize)
-
-            val yuvImage = android.graphics.YuvImage(
-                nv21,
-                android.graphics.ImageFormat.NV21,
-                image.width,
-                image.height,
-                null
-            )
-            val stream = ByteArrayOutputStream()
-            yuvImage.compressToJpeg(
-                android.graphics.Rect(0, 0, image.width, image.height),
-                90,
-                stream
-            )
-            val jpegBytes = stream.toByteArray()
-
-            // Rotate if needed (front camera often needs mirroring)
             val rotation = image.imageInfo.rotationDegrees
-            if (rotation != 0) {
-                val bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
-                val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
-                val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                val rotatedStream = ByteArrayOutputStream()
-                rotated.compress(Bitmap.CompressFormat.JPEG, 90, rotatedStream)
-                bitmap.recycle()
-                rotated.recycle()
-                rotatedStream.toByteArray()
-            } else {
-                jpegBytes
+            val bitmap = BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.size)
+            val matrix = Matrix().apply {
+                if (rotation != 0) postRotate(rotation.toFloat())
+                postScale(-1f, 1f) // horizontal mirror for front camera
             }
+            val corrected = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            val stream = ByteArrayOutputStream()
+            corrected.compress(Bitmap.CompressFormat.JPEG, 90, stream)
+            bitmap.recycle()
+            corrected.recycle()
+            stream.toByteArray()
         } catch (e: Exception) {
             Log.e(TAG, "Image conversion failed", e)
             null
