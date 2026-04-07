@@ -125,7 +125,9 @@ class ProfileActivity : AppCompatActivity() {
         // Family info (single object with father/mother/spouse)
         val family = profile.family
         if (family != null && hasAnyFamilyData(family)) {
-            findViewById<LinearLayout>(R.id.familySection).visibility = View.VISIBLE
+           // findViewById<LinearLayout>(R.id.familySection).visibility = View.VISIBLE
+            findViewById<View>(R.id.familySection).visibility = View.VISIBLE
+
             val familyContainer = findViewById<LinearLayout>(R.id.familyContainer)
             familyContainer.removeAllViews()
 
@@ -150,7 +152,8 @@ class ProfileActivity : AppCompatActivity() {
         // Legal info (single object with decision details)
         val legal = profile.legal
         if (legal != null && legal.decisionNumber != null) {
-            findViewById<LinearLayout>(R.id.legalSection).visibility = View.VISIBLE
+            findViewById<View>(R.id.legalSection).visibility = View.VISIBLE
+            //  findViewById<LinearLayout>(R.id.legalSection).visibility = View.VISIBLE
             val legalContainer = findViewById<LinearLayout>(R.id.legalContainer)
             legalContainer.removeAllViews()
 

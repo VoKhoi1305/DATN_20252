@@ -146,7 +146,9 @@ class GeofenceActivity : AppCompatActivity() {
 
         // Curfew section
         if (curfewStart != null && curfewEnd != null) {
-            findViewById<LinearLayout>(R.id.curfewSection).visibility = View.VISIBLE
+            findViewById<View>(R.id.curfewSection).visibility = View.VISIBLE
+
+            // findViewById<LinearLayout>(R.id.curfewSection).visibility = View.VISIBLE
             findViewById<TextView>(R.id.tvCurfewTime).text =
                 getString(R.string.geofence_curfew_format, curfewStart, curfewEnd)
             findViewById<TextView>(R.id.tvCurfewNote).text =

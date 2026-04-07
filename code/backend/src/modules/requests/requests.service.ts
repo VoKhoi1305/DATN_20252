@@ -60,12 +60,13 @@ export class RequestsService {
     if (!subject) {
       throw new NotFoundException('Không tìm thấy hồ sơ đối tượng');
     }
+    const requestCode = `REQ-${Date.now()}`;
 
     const result = await this.dataSource.query(
-      `INSERT INTO requests (subject_id, type, reason, details)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, type, reason, details, status, created_at`,
-      [subject.id, data.type, data.reason, JSON.stringify(data.details || {})],
+      `INSERT INTO requests (code, subject_id, type, reason, details )
+       VALUES ($1, $2, $3, $4, $5::jsonb)
+       RETURNING id, code, type, reason, details, status, created_at`,
+      [requestCode, subject.id, data.type, data.reason, JSON.stringify(data.details || {})],
     );
 
     this.logger.log(

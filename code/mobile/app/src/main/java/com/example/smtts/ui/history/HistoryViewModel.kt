@@ -77,7 +77,7 @@ class HistoryViewModel(private val tokenManager: TokenManager) : ViewModel() {
             try {
                 val response = eventApi.getEvents(
                     subjectId = subjectId,
-                    type = "CHECK_IN",
+                    type = "CHECKIN",
                     from = from,
                     to = to,
                     limit = 31

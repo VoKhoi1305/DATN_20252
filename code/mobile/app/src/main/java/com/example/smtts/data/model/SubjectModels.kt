@@ -33,7 +33,7 @@ data class SubjectProfile(
 data class SubjectArea(
     @SerializedName("id") val id: String,
     @SerializedName("name") val name: String,
-    @SerializedName("level") val level: Int?
+    @SerializedName("level") val level: String?
 )
 
 data class SubjectOfficer(

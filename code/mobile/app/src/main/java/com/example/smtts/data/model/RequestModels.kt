@@ -11,9 +11,9 @@ data class SubjectRequest(
     @SerializedName("status") val status: String,
     @SerializedName("reason") val reason: String,
     @SerializedName("details") val details: Map<String, Any>?,
-    @SerializedName("reviewNote") val reviewNote: String?,
-    @SerializedName("createdAt") val createdAt: String,
-    @SerializedName("reviewedAt") val reviewedAt: String?
+    @SerializedName("review_note") val reviewNote: String?,
+    @SerializedName("created_at") val createdAt: String,
+    @SerializedName("reviewed_at") val reviewedAt: String?
 )
 
 // ── Create Request Payload ──
