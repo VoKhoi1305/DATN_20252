@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
 import * as ExcelJS from 'exceljs';
 import { Event, EventResult } from './entities/event.entity';
 import { Subject } from '../subjects/entities/subject.entity';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { AreasService } from '../areas/areas.service';
 import { EventProcessorService } from '../alerts/event-processor.service';
 import { ListEventsDto } from './dto/list-events.dto';
@@ -108,26 +108,35 @@ export class EventsService {
       return { data: [], total: 0, page: query.page, limit: query.limit };
     }
 
-    const areaIds = await this.areasService.resolveAreaIds(
-      user.dataScopeLevel,
-      user.areaId,
-    );
-
     const qb = this.eventRepo
       .createQueryBuilder('e')
       .leftJoinAndSelect('e.subject', 's');
 
-    // Scope filtering by area
-    if (areaIds !== null) {
-      if (areaIds.length === 0) {
+    // SUBJECT role users can only see their own events — auto-resolve subject_id
+    if (user.role === UserRole.SUBJECT) {
+      const subject = await this.subjectRepo.findOneBy({ userAccountId: userId });
+      if (!subject) {
         return { data: [], total: 0, page: query.page, limit: query.limit };
       }
-      qb.andWhere('s.areaId IN (:...areaIds)', { areaIds });
-    }
+      qb.andWhere('e.subjectId = :subjectId', { subjectId: subject.id });
+    } else {
+      // Officer roles: scope filtering by area
+      const areaIds = await this.areasService.resolveAreaIds(
+        user.dataScopeLevel,
+        user.areaId,
+      );
 
-    // Filters
-    if (query.subject_id) {
-      qb.andWhere('e.subjectId = :subjectId', { subjectId: query.subject_id });
+      if (areaIds !== null) {
+        if (areaIds.length === 0) {
+          return { data: [], total: 0, page: query.page, limit: query.limit };
+        }
+        qb.andWhere('s.areaId IN (:...areaIds)', { areaIds });
+      }
+
+      // Filters
+      if (query.subject_id) {
+        qb.andWhere('e.subjectId = :subjectId', { subjectId: query.subject_id });
+      }
     }
 
     if (query.type) {

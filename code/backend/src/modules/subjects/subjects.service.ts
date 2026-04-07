@@ -344,6 +344,7 @@ export class SubjectsService {
 
     return {
       id: subject.id,
+      user_account_id: userId,
       ma_ho_so: subject.code,
       full_name: subject.fullName,
       cccd: this.formatCccd(subject.cccdEncrypted, shouldMask),
@@ -369,6 +370,11 @@ export class SubjectsService {
             id: scenario.id,
             name: scenario.name,
             checkin_frequency: scenario.checkinFrequency,
+            checkin_window_start: scenario.checkinWindowStart,
+            checkin_window_end: scenario.checkinWindowEnd,
+            geofence_id: scenario.geofenceId,
+            curfew_start: scenario.curfewStart,
+            curfew_end: scenario.curfewEnd,
             assigned_at: assignment!.assignedAt,
           }
         : null,

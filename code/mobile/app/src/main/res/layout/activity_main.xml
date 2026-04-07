@@ -176,58 +176,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ═══ NFC Status Banner ═══ -->
-            <LinearLayout
-                android:id="@+id/nfcStatusBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/spacing_lg"
-                android:background="@drawable/bg_nfc_status"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="@dimen/spacing_md">
-
-                <ImageView
-                    android:id="@+id/ivNfcStatus"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:padding="4dp"
-                    android:src="@drawable/ic_nfc"
-                    app:tint="#16A34A"
-                    android:contentDescription="NFC" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/spacing_sm"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/tvNfcStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/dashboard_nfc_ready"
-                        android:textColor="#15803D"
-                        android:textSize="@dimen/text_sm"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvNfcHint"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/dashboard_nfc_hint"
-                        android:textColor="#16A34A"
-                        android:textSize="@dimen/text_xs" />
-                </LinearLayout>
-
-                <View
-                    android:id="@+id/nfcDot"
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:background="@drawable/bg_nfc_dot_green" />
-            </LinearLayout>
-
             <!-- ═══ Quick Actions Title ═══ -->
             <TextView
                 android:layout_width="wrap_content"
@@ -274,7 +222,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_red" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -282,7 +230,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_checkin"
                                 android:src="@drawable/ic_checkin"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -333,7 +281,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_blue" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -341,7 +289,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_enrollment"
                                 android:src="@drawable/ic_fingerprint"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -399,7 +347,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_amber" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -407,7 +355,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_history"
                                 android:src="@drawable/ic_history"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -458,7 +406,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_purple" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -466,7 +414,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_profile"
                                 android:src="@drawable/ic_person"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -526,7 +474,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_teal" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -534,7 +482,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_notification"
                                 android:src="@drawable/ic_notification"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -585,7 +533,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_orange" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -593,7 +541,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_request"
                                 android:src="@drawable/ic_request"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -653,7 +601,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_green" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -661,7 +609,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_geofence"
                                 android:src="@drawable/ic_location"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -712,7 +660,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_indigo" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -720,7 +668,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_device"
                                 android:src="@drawable/ic_device"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -780,7 +728,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_amber" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -788,7 +736,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_document"
                                 android:src="@drawable/ic_document"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -839,7 +787,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_teal" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -847,7 +795,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_contact"
                                 android:src="@drawable/ic_phone"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView
@@ -907,7 +855,7 @@
                             <View
                                 android:layout_width="44dp"
                                 android:layout_height="44dp"
-                                android:background="@drawable/bg_icon_circle_gray" />
+                                android:background="@drawable/bg_icon_circle_outline" />
 
                             <ImageView
                                 android:layout_width="22dp"
@@ -915,7 +863,7 @@
                                 android:layout_gravity="center"
                                 android:contentDescription="@string/dashboard_settings"
                                 android:src="@drawable/ic_settings"
-                                app:tint="@color/white" />
+                                app:tint="@color/smtts_red_700" />
                         </FrameLayout>
 
                         <TextView

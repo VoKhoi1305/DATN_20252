@@ -61,6 +61,7 @@
     <string name="error_network">Không có kết nối mạng. Vui lòng thử lại.</string>
     <string name="error_system">Lỗi hệ thống. Vui lòng thử lại sau.</string>
     <string name="session_expired">Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.</string>
+    <string name="enrollment_required">Vui lòng hoàn thành đăng ký sinh trắc học trước</string>
 
     <!-- OTP placeholder messages -->
     <string name="otp_required_message">Vui lòng xác thực OTP để tiếp tục.</string>

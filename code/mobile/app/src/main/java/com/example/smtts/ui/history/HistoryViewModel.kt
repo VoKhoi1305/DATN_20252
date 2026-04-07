@@ -51,7 +51,13 @@ class HistoryViewModel(private val tokenManager: TokenManager) : ViewModel() {
         currentYear = year
         currentMonth = month
 
-        val user = tokenManager.getUser() ?: run {
+        if (!tokenManager.isAuthenticated()) {
+            _uiState.value = HistoryUiState.Error("USER_NOT_FOUND")
+            return
+        }
+
+        // Use cached subject ID; for SUBJECT role, backend also auto-resolves
+        val subjectId = tokenManager.getSubjectId() ?: tokenManager.getUser()?.id ?: run {
             _uiState.value = HistoryUiState.Error("USER_NOT_FOUND")
             return
         }
@@ -70,7 +76,7 @@ class HistoryViewModel(private val tokenManager: TokenManager) : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = eventApi.getEvents(
-                    subjectId = user.id,
+                    subjectId = subjectId,
                     type = "CHECK_IN",
                     from = from,
                     to = to,

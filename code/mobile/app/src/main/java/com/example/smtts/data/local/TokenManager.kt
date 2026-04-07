@@ -15,6 +15,8 @@ class TokenManager(context: Context) {
         private const val KEY_REFRESH_TOKEN = "smtts_refresh_token"
         private const val KEY_TEMP_TOKEN = "smtts_temp_token"
         private const val KEY_USER = "smtts_user"
+        private const val KEY_SUBJECT_ID = "smtts_subject_id"
+        private const val KEY_SUBJECT_LIFECYCLE = "smtts_subject_lifecycle"
         private const val KEY_NFC_CCCD = "smtts_nfc_cccd"
         private const val KEY_NFC_DOB = "smtts_nfc_dob"
         private const val KEY_NFC_EXPIRY = "smtts_nfc_expiry"
@@ -72,6 +74,28 @@ class TokenManager(context: Context) {
 
     fun setUser(user: UserInfo) {
         prefs.edit().putString(KEY_USER, gson.toJson(user)).apply()
+    }
+
+    // ── Subject Data ──
+
+    fun getSubjectId(): String? = prefs.getString(KEY_SUBJECT_ID, null)
+
+    fun setSubjectId(id: String) {
+        prefs.edit().putString(KEY_SUBJECT_ID, id).apply()
+    }
+
+    fun getSubjectLifecycle(): String? = prefs.getString(KEY_SUBJECT_LIFECYCLE, null)
+
+    fun setSubjectLifecycle(lifecycle: String) {
+        prefs.edit().putString(KEY_SUBJECT_LIFECYCLE, lifecycle).apply()
+    }
+
+    fun isEnrollmentComplete(): Boolean {
+        val lifecycle = getSubjectLifecycle()
+        return lifecycle == "DANG_CHO_PHE_DUYET" ||
+                lifecycle == "DANG_QUAN_LY" ||
+                lifecycle == "TAI_HOA_NHAP" ||
+                lifecycle == "KET_THUC"
     }
 
     // ── NFC BAC Data ──

@@ -319,10 +319,19 @@ class EnrollmentActivity : BaseNfcActivity() {
             }
 
             is EnrollmentUiState.Complete -> {
-                // Enrollment submitted for approval
-                binding.btnSubmitEnrollment.visibility = View.GONE
-                binding.enrollmentSuccessArea.visibility = View.VISIBLE
-                showSnackbar(state.message)
+                val lifecycle = tokenManager.getSubjectLifecycle()
+                val isApproved = lifecycle == "DANG_QUAN_LY" ||
+                        lifecycle == "TAI_HOA_NHAP" ||
+                        lifecycle == "KET_THUC"
+                if (isApproved) {
+                    // Already approved by officer — go straight to dashboard
+                    navigateToMain()
+                } else {
+                    // Waiting for officer approval — show success area
+                    binding.btnSubmitEnrollment.visibility = View.GONE
+                    binding.enrollmentSuccessArea.visibility = View.VISIBLE
+                    showSnackbar(state.message)
+                }
             }
 
             is EnrollmentUiState.Error -> {

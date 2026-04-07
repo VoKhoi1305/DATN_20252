@@ -101,6 +101,12 @@ class LoginViewModel(private val tokenManager: TokenManager) : ViewModel() {
                 result.accessToken?.let { tokenManager.setAccessToken(it) }
                 result.refreshToken?.let { tokenManager.setRefreshToken(it) }
                 result.user?.let { tokenManager.setUser(it) }
+
+                // Cache subject profile data (ID + lifecycle) for SUBJECT role
+                if (result.user?.role == "SUBJECT") {
+                    fetchAndCacheSubjectProfile()
+                }
+
                 _uiState.value = LoginUiState.Success(result)
             }
         }
@@ -116,6 +122,26 @@ class LoginViewModel(private val tokenManager: TokenManager) : ViewModel() {
             },
             httpCode = httpCode
         )
+    }
+
+    /**
+     * Fetch subject profile and cache subject ID + lifecycle for enrollment checks.
+     */
+    private fun fetchAndCacheSubjectProfile() {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.subjectApi.getMyProfile()
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val profile = response.body()?.data
+                    if (profile != null) {
+                        tokenManager.setSubjectId(profile.id)
+                        profile.lifecycle?.let { tokenManager.setSubjectLifecycle(it) }
+                    }
+                }
+            } catch (_: Exception) {
+                // Non-critical — will be fetched again on next profile load
+            }
+        }
     }
 
     fun resetState() {

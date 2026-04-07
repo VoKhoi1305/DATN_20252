@@ -45,6 +45,11 @@ data class SubjectScenario(
     @SerializedName("id") val id: String,
     @SerializedName("name") val name: String,
     @SerializedName("checkin_frequency") val checkinFrequency: String?,
+    @SerializedName("checkin_window_start") val checkinWindowStart: String?,
+    @SerializedName("checkin_window_end") val checkinWindowEnd: String?,
+    @SerializedName("geofence_id") val geofenceId: String?,
+    @SerializedName("curfew_start") val curfewStart: String?,
+    @SerializedName("curfew_end") val curfewEnd: String?,
     @SerializedName("assigned_at") val assignedAt: String?
 )
 

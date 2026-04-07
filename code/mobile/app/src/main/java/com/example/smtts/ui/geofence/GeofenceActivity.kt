@@ -65,17 +65,23 @@ class GeofenceActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body()?.success == true) {
                     val profile = response.body()?.data
                     val scenario = profile?.scenario
-                    if (scenario != null) {
-                        // Scenario has geofence info — load via geofence API
-                        showError("NO_GEOFENCE")
+                    val geofenceId = scenario?.geofenceId
+                    if (geofenceId != null) {
+                        viewModel.loadGeofence(
+                            geofenceId,
+                            scenario.curfewStart,
+                            scenario.curfewEnd
+                        )
                     } else {
                         showError("NO_GEOFENCE")
                     }
                 } else {
                     showError("LOAD_FAILED")
                 }
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
                 showError("NETWORK_ERROR")
+            } catch (e: Exception) {
+                showError("SYSTEM_ERROR")
             }
         }
     }

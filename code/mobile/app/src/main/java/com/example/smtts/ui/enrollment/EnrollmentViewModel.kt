@@ -94,6 +94,8 @@ class EnrollmentViewModel(
                     val body = response.body()
                     if (body != null && body.success) {
                         val status = body.data
+                        // Always update cached lifecycle from server
+                        tokenManager.setSubjectLifecycle(status.lifecycle)
                         _nfcDone.value = status.nfcEnrolled
                         _faceDone.value = status.faceEnrolled
                         _deviceDone.value = status.deviceEnrolled
@@ -294,6 +296,7 @@ class EnrollmentViewModel(
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null && body.success) {
+                        tokenManager.setSubjectLifecycle("DANG_CHO_PHE_DUYET")
                         _currentStep.value = EnrollmentStep.DONE
                         _uiState.value = EnrollmentUiState.Complete(body.data.message)
                     } else {
