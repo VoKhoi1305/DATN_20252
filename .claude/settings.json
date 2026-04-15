@@ -14,7 +14,8 @@
       "Read(//c/Program Files/Microsoft/**)",
       "Bash(JAVA_HOME=\"C:/Program Files/Java/jdk-23\" ./gradlew compileDebugKotlin)",
       "Read(//e/scripts/migrations/**)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(tee /tmp/tsc.log)"
     ]
   }
 }

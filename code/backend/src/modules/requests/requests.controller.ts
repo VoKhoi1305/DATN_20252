@@ -16,6 +16,25 @@ export class RequestsController {
   constructor(private readonly requestsService: RequestsService) {}
 
   /**
+   * GET /api/v1/requests/all?status=&search=&page=1&limit=20
+   * List all requests for officers.
+   */
+  @Get('all')
+  async listAll(
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.requestsService.listAll({
+      status,
+      search,
+      page: parseInt(page || '1', 10),
+      limit: parseInt(limit || '20', 10),
+    });
+  }
+
+  /**
    * GET /api/v1/requests?subject_id=...&page=1&limit=20
    * List requests for a subject.
    */
@@ -43,6 +62,20 @@ export class RequestsController {
     @Body() body: { type: string; reason: string; details?: Record<string, any> },
   ) {
     return this.requestsService.create(userId, body);
+  }
+
+  /**
+   * POST /api/v1/requests/:id/review
+   * Approve or reject a request.
+   */
+  @Post(':id/review')
+  @HttpCode(HttpStatus.OK)
+  async review(
+    @Param('id') id: string,
+    @CurrentUser('userId') userId: string,
+    @Body() body: { action: 'APPROVED' | 'REJECTED'; note?: string },
+  ) {
+    return this.requestsService.review(id, userId, body.action, body.note);
   }
 
   /**

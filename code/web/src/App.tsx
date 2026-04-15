@@ -24,6 +24,7 @@ import TracePage from '@/pages/trace/TracePage';
 import UserListPage from '@/pages/users/UserListPage';
 import UserCreatePage from '@/pages/users/UserCreatePage';
 import UserEditPage from '@/pages/users/UserEditPage';
+import RequestApprovalsPage from '@/pages/request-approvals/RequestApprovalsPage';
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
           <Route path="/quy-tac-leo-thang" element={<EscalationRuleBuilderPage />} />
           <Route path="/xet-duyet" element={<ApprovalsPage />} />
           <Route path="/duyet-dang-ky" element={<EnrollmentApprovalsPage />} />
+          <Route path="/yeu-cau" element={<RequestApprovalsPage />} />
           <Route path="/truy-vet" element={<TracePage />} />
           <Route path="/admin/tai-khoan" element={<UserListPage />} />
           <Route path="/admin/tai-khoan/them-moi" element={<UserCreatePage />} />

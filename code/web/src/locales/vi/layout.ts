@@ -25,6 +25,7 @@ const layout = {
   navAdminSection: 'Quản trị',
   navAdmin: 'Tài khoản',
   navEnrollmentApprovals: 'Duyệt đăng ký',
+  navRequests: 'Yêu cầu',
 
   // Common UI
   ariaClose: 'Đóng',

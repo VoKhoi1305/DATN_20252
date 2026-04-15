@@ -9,6 +9,7 @@ import { BiometricModule } from '../biometric/biometric.module';
 import { EnrollmentModule } from '../enrollment/enrollment.module';
 import { DevicesModule } from '../devices/devices.module';
 import { EventsModule } from '../events/events.module';
+import { RequestsModule } from '../requests/requests.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EventsModule } from '../events/events.module';
     EnrollmentModule,    // provides FaceRecognitionClient
     DevicesModule,
     EventsModule,
+    RequestsModule,      // provides RequestsService (travel/postpone lookups)
   ],
   controllers: [CheckinController],
   providers: [CheckinService],

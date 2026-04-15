@@ -12,6 +12,7 @@ import { FaceRecognitionClient } from '../enrollment/face-recognition.client';
 import { DevicesService } from '../devices/devices.service';
 import { EventsService } from '../events/events.service';
 import { EventResult } from '../events/entities/event.entity';
+import { RequestsService } from '../requests/requests.service';
 import {
   FaceResult,
   LivenessResult as BiometricLivenessResult,
@@ -31,6 +32,7 @@ export class CheckinService {
     private readonly faceRecognitionClient: FaceRecognitionClient,
     private readonly devicesService: DevicesService,
     private readonly eventsService: EventsService,
+    private readonly requestsService: RequestsService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -178,31 +180,45 @@ export class CheckinService {
 
     // 5. Geofence check
     // Per SBR-06: wrong location does NOT block check-in, but is logged as WARNING.
+    // If subject has an APPROVED TRAVEL request covering today, check-in still
+    // counts but the geofence check is waived entirely.
     let inGeofence: boolean | null = null;
     let geofenceDistance: number | null = null;
+    let travelWaiver = false;
 
     if (dto.gpsLat != null && dto.gpsLng != null) {
-      const geo = await this.resolveActiveGeofence(subject.id);
-      if (geo) {
-        geofenceDistance = this.calculateDistanceMeters(
-          dto.gpsLat,
-          dto.gpsLng,
-          geo.centerLat,
-          geo.centerLng,
-        );
-        inGeofence = geofenceDistance <= geo.radius;
+      travelWaiver = await this.requestsService.hasApprovedTravelOn(
+        subject.id,
+        new Date(),
+      );
 
-        if (!inGeofence) {
-          errors.push(
-            `Outside geofence: ${geofenceDistance}m from center (radius ${geo.radius}m)`,
+      if (travelWaiver) {
+        this.logger.log(
+          `Geofence check waived for subject ${subject.id} (approved TRAVEL request covers today)`,
+        );
+      } else {
+        const geo = await this.resolveActiveGeofence(subject.id);
+        if (geo) {
+          geofenceDistance = this.calculateDistanceMeters(
+            dto.gpsLat,
+            dto.gpsLng,
+            geo.centerLat,
+            geo.centerLng,
           );
-          // Per SBR-06: log GEOFENCE_EXIT and set WARNING only if nothing else has failed.
-          if (eventResult === EventResult.SUCCESS) {
-            eventResult = EventResult.WARNING;
-            eventType = 'GEOFENCE_EXIT';
-          } else {
-            // Already FAILED — record the geofence violation in extra_data only.
-            errors.push(`[GEOFENCE_EXIT distance=${geofenceDistance}m]`);
+          inGeofence = geofenceDistance <= geo.radius;
+
+          if (!inGeofence) {
+            errors.push(
+              `Outside geofence: ${geofenceDistance}m from center (radius ${geo.radius}m)`,
+            );
+            // Per SBR-06: log GEOFENCE_EXIT and set WARNING only if nothing else has failed.
+            if (eventResult === EventResult.SUCCESS) {
+              eventResult = EventResult.WARNING;
+              eventType = 'GEOFENCE_EXIT';
+            } else {
+              // Already FAILED — record the geofence violation in extra_data only.
+              errors.push(`[GEOFENCE_EXIT distance=${geofenceDistance}m]`);
+            }
           }
         }
       }
@@ -236,7 +252,13 @@ export class CheckinService {
         ? new Date(dto.clientTimestamp)
         : undefined,
       isVoluntary: true,
-      extraData: errors.length > 0 ? { errors } : undefined,
+      extraData:
+        errors.length > 0 || travelWaiver
+          ? {
+              ...(errors.length > 0 ? { errors } : {}),
+              ...(travelWaiver ? { travelWaiver: true } : {}),
+            }
+          : undefined,
     });
 
     // 8. Create BiometricLog

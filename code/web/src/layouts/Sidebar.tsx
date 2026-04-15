@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   TrendingUp,
   UserCheck,
+  FileText,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { getUser } from '@/stores/auth.store';
@@ -42,6 +43,11 @@ const navItems: NavItem[] = [
     icon: <UserCheck size={16} />,
     path: '/duyet-dang-ky',
     roles: ['IT_ADMIN', 'LANH_DAO', 'CAN_BO_QUAN_LY'],
+  },
+  {
+    label: MSG.navRequests,
+    icon: <FileText size={16} />,
+    path: '/yeu-cau',
   },
   { label: MSG.navTrace, icon: <Route size={16} />, path: '/truy-vet' },
   { label: MSG.navMap, icon: <Map size={16} />, path: '/ban-do' },

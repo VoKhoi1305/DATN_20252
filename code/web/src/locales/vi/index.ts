@@ -15,3 +15,4 @@ export { default as escalationRules } from './escalationRules';
 export { default as trace } from './trace';
 export { default as users } from './users';
 export { default as enrollmentApprovals } from './enrollmentApprovals';
+export { default as requests } from './requests';

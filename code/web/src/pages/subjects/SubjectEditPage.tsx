@@ -315,7 +315,8 @@ function SubjectEditPage() {
 
         if (cancelled) return;
 
-        const subjectDetail = detailRes.data;
+        const raw = detailRes.data as any;
+        const subjectDetail = (raw?.data ?? raw) as SubjectDetail;
         setDetail(subjectDetail);
 
         // If status is ENDED, redirect to detail page
