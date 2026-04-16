@@ -16,6 +16,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
 import { ActivateDto } from './dto/activate.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { VerifyBackupCodeDto } from './dto/verify-backup-code.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ErrorCodes } from '../../common/constants/error-codes';
@@ -126,6 +127,43 @@ export class AuthController {
       refreshToken: result.refreshToken,
       user: result.user,
     };
+  }
+
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Post('verify-backup-code')
+  @HttpCode(HttpStatus.OK)
+  async verifyBackupCode(
+    @Req() req: Request,
+    @Body() dto: VerifyBackupCodeDto,
+  ) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException({
+        code: ErrorCodes.TOKEN_INVALID,
+        message: 'Temp token is required',
+      });
+    }
+
+    const tempToken = authHeader.substring(7);
+    let payload: JwtPayload;
+    try {
+      payload = this.jwtService.verify<JwtPayload>(tempToken);
+    } catch {
+      throw new UnauthorizedException({
+        code: ErrorCodes.TOKEN_EXPIRED,
+        message: 'Temp token is invalid or expired',
+      });
+    }
+
+    if (payload.otpVerified) {
+      throw new UnauthorizedException({
+        code: ErrorCodes.TOKEN_INVALID,
+        message: 'Invalid token type for backup code verification',
+      });
+    }
+
+    return this.authService.verifyBackupCodeLogin(payload.sub, dto.backupCode);
   }
 
   @Post('setup-otp')

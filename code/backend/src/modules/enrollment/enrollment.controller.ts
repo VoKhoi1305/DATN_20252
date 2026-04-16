@@ -20,6 +20,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
 import { EnrollmentService } from './enrollment.service';
 import { EnrollNfcDto } from './dto/enroll-nfc.dto';
+import { ResetEnrollmentDto } from './dto/reset-enrollment.dto';
 import { EnrollDeviceDto } from '../devices/dto/enroll-device.dto';
 
 @Controller('enrollment')
@@ -180,5 +181,28 @@ export class EnrollmentController {
     @CurrentUser('userId') officerUserId: string,
   ) {
     return this.enrollmentService.rejectEnrollment(subjectId, officerUserId, note);
+  }
+
+  /**
+   * POST /api/v1/enrollment/:subjectId/reset
+   * Re-enrollment: officer resets a subject's biometrics so they must redo enrollment.
+   * Deactivates face templates + NFC records (history preserved); optionally resets device.
+   * Transitions: DANG_QUAN_LY | DANG_CHO_PHE_DUYET | TAI_HOA_NHAP → ENROLLMENT
+   */
+  @Post(':subjectId/reset')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.IT_ADMIN, UserRole.LANH_DAO, UserRole.CAN_BO_QUAN_LY)
+  async resetEnrollment(
+    @Param('subjectId') subjectId: string,
+    @Body() dto: ResetEnrollmentDto,
+    @CurrentUser('userId') officerUserId: string,
+  ) {
+    return this.enrollmentService.resetEnrollment(
+      subjectId,
+      officerUserId,
+      dto.reason,
+      dto.resetDevice ?? false,
+    );
   }
 }

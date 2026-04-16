@@ -296,6 +296,63 @@ export class AuthService {
     return true;
   }
 
+  /**
+   * Login flow: exchange a single-use backup code for full access tokens.
+   * Only callable with a valid temp token (post-password, pre-OTP).
+   * Each code is consumed on success.
+   */
+  async verifyBackupCodeLogin(
+    userId: string,
+    code: string,
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Partial<User>;
+    remainingBackupCodes: number;
+  }> {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new NotFoundException({
+        code: ErrorCodes.USER_NOT_FOUND,
+        message: 'User not found',
+      });
+    }
+
+    if (!user.otpEnabled) {
+      throw new BadRequestException({
+        code: ErrorCodes.OTP_NOT_SETUP,
+        message: 'OTP is not enabled for this user',
+      });
+    }
+
+    if (!user.backupCodes || user.backupCodes.length === 0) {
+      throw new BadRequestException({
+        code: ErrorCodes.NO_BACKUP_CODES,
+        message:
+          'Không còn mã dự phòng khả dụng. Vui lòng liên hệ quản trị viên để cấp lại.',
+      });
+    }
+
+    const normalized = code.trim().toUpperCase();
+    const consumed = await this.verifyBackupCode(userId, normalized);
+    if (!consumed) {
+      throw new UnauthorizedException({
+        code: ErrorCodes.INVALID_BACKUP_CODE,
+        message: 'Mã dự phòng không hợp lệ hoặc đã được sử dụng.',
+      });
+    }
+
+    const tokens = await this.generateTokens(user);
+    const refreshed = await this.usersService.findById(userId);
+    const remainingBackupCodes = refreshed?.backupCodes?.length ?? 0;
+
+    return {
+      ...tokens,
+      user: await this.sanitizeUser(user),
+      remainingBackupCodes,
+    };
+  }
+
   async refreshTokens(
     refreshToken: string,
   ): Promise<{

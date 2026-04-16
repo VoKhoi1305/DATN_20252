@@ -32,3 +32,22 @@ export function rejectEnrollment(subjectId: string, note: string) {
     { note },
   );
 }
+
+export interface ResetEnrollmentResponse {
+  lifecycle: string;
+  resetAt: string;
+  facesDeactivated: number;
+  nfcDeactivated: number;
+  deviceReset: boolean;
+  message: string;
+}
+
+export function resetEnrollment(
+  subjectId: string,
+  body: { reason: string; resetDevice?: boolean },
+) {
+  return api.post<{ data: ResetEnrollmentResponse }>(
+    `/enrollment/${subjectId}/reset`,
+    body,
+  );
+}

@@ -1,0 +1,175 @@
+# ============================================================
+# SMTTS — Production stack
+# Usage:
+#   cd code/docker
+#   cp .env.prod.example .env.prod
+#   # edit .env.prod with real secrets
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# ============================================================
+
+name: smtts-prod
+
+services:
+  # ----------------------------------------------------------
+  # PostgreSQL — Main DB (smtts_main)
+  # ----------------------------------------------------------
+  postgres-main:
+    image: postgres:16-alpine
+    container_name: smtts-postgres-main
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_MAIN_NAME:-smtts_main}
+      POSTGRES_USER: ${DB_MAIN_USER:-smtts_user}
+      POSTGRES_PASSWORD: ${DB_MAIN_PASSWORD}
+    volumes:
+      - pgdata-main:/var/lib/postgresql/data
+      # Init scripts run only on first boot (when volume is empty)
+      - ../scripts/migrations/001_smtts_main_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+      - ../scripts/migrations/003_seed_data.sql:/docker-entrypoint-initdb.d/003_seed.sql:ro
+      - ../scripts/migrations/004_seed_dashboard_data.sql:/docker-entrypoint-initdb.d/004_seed_dashboard.sql:ro
+      - ../scripts/migrations/008_seed_mobile_test_subjects.sql:/docker-entrypoint-initdb.d/008_seed_mobile.sql:ro
+    networks: [smtts-net]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_MAIN_USER:-smtts_user} -d ${DB_MAIN_NAME:-smtts_main}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ----------------------------------------------------------
+  # PostgreSQL — Biometric DB (separate per SBR-18)
+  # ----------------------------------------------------------
+  postgres-biometric:
+    image: postgres:16-alpine
+    container_name: smtts-postgres-biometric
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_BIO_NAME:-smtts_biometric}
+      POSTGRES_USER: ${DB_BIO_USER:-smtts_bio_user}
+      POSTGRES_PASSWORD: ${DB_BIO_PASSWORD}
+    volumes:
+      - pgdata-biometric:/var/lib/postgresql/data
+      - ../scripts/migrations/002_smtts_biometric_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    networks: [smtts-net]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_BIO_USER:-smtts_bio_user} -d ${DB_BIO_NAME:-smtts_biometric}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ----------------------------------------------------------
+  # Redis — cache, sessions, scenarios, geofence, dashboard
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: smtts-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    networks: [smtts-net]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------
+  # Face Recognition (Python / FastAPI / InsightFace)
+  # ----------------------------------------------------------
+  face-recognition:
+    build:
+      context: ../face-recognition
+      dockerfile: Dockerfile
+    image: ${REGISTRY_PREFIX:-ghcr.io/smtts}/smtts-face:${IMAGE_TAG:-latest}
+    container_name: smtts-face-recognition
+    restart: unless-stopped
+    environment:
+      FACE_DET_MODEL: ${FACE_DET_MODEL:-buffalo_l}
+      FACE_DEFAULT_MATCH_THRESHOLD: ${FACE_DEFAULT_MATCH_THRESHOLD:-0.45}
+      FACE_LIVENESS_THRESHOLD: ${FACE_LIVENESS_THRESHOLD:-0.5}
+      FACE_ENABLE_LIVENESS: ${FACE_ENABLE_LIVENESS:-true}
+    networks: [smtts-net]
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # ----------------------------------------------------------
+  # Backend (NestJS API)
+  # ----------------------------------------------------------
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: ${REGISTRY_PREFIX:-ghcr.io/smtts}/smtts-backend:${IMAGE_TAG:-latest}
+    container_name: smtts-backend
+    restart: unless-stopped
+    depends_on:
+      postgres-main: { condition: service_healthy }
+      postgres-biometric: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      face-recognition: { condition: service_started }
+    environment:
+      NODE_ENV: production
+      APP_PORT: 3000
+      APP_ENV: production
+      # Main DB
+      DB_HOST: postgres-main
+      DB_PORT: 5432
+      DB_NAME: ${DB_MAIN_NAME:-smtts_main}
+      DB_USER: ${DB_MAIN_USER:-smtts_user}
+      DB_PASS: ${DB_MAIN_PASSWORD}
+      # Biometric DB
+      BIO_DB_HOST: postgres-biometric
+      BIO_DB_PORT: 5432
+      BIO_DB_NAME: ${DB_BIO_NAME:-smtts_biometric}
+      BIO_DB_USER: ${DB_BIO_USER:-smtts_bio_user}
+      BIO_DB_PASS: ${DB_BIO_PASSWORD}
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-15m}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-7d}
+      JWT_TEMP_EXPIRY: ${JWT_TEMP_EXPIRY:-5m}
+      OTP_ISSUER: ${OTP_ISSUER:-SMTTS}
+      # Face service
+      FACE_SERVICE_URL: http://face-recognition:8000
+      # Throttle
+      THROTTLE_TTL: ${THROTTLE_TTL:-60000}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-20}
+    volumes:
+      - backend-uploads:/app/uploads
+    networks: [smtts-net]
+
+  # ----------------------------------------------------------
+  # Web (Nginx serving SPA + reverse-proxy /api/v1 → backend)
+  # ----------------------------------------------------------
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+    image: ${REGISTRY_PREFIX:-ghcr.io/smtts}/smtts-web:${IMAGE_TAG:-latest}
+    container_name: smtts-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Public HTTP — put behind Caddy/Cloudflare/Nginx for HTTPS
+      - '${WEB_PUBLIC_PORT:-80}:80'
+    networks: [smtts-net]
+
+networks:
+  smtts-net:
+    driver: bridge
+
+volumes:
+  pgdata-main:
+  pgdata-biometric:
+  redis-data:
+  backend-uploads:

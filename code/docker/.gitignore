@@ -1,0 +1,14 @@
+# Local secrets (never commit)
+.env
+.env.prod
+.env.*.local
+
+# Large image tarballs from save-images.sh (transfer manually, not via git)
+dist/
+
+# Database backups
+backups/
+
+# Caddy state if running locally
+caddy_data/
+caddy_config/

@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Upload,
   Trash2,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
 
 import PageHeader from '@/components/navigation/PageHeader';
@@ -34,6 +36,7 @@ import {
   unassignScenario,
   fetchScenarioOptions,
 } from '@/api/subjects.api';
+import { resetEnrollment } from '@/api/enrollment.api';
 import { getUser } from '@/stores/auth.store';
 import { getMessages } from '@/locales';
 
@@ -61,6 +64,8 @@ const STATUS_BADGE: Record<string, { variant: 'pending' | 'info' | 'processing' 
 
 const CAN_EDIT_ROLES = ['IT_ADMIN', 'LANH_DAO', 'CAN_BO_QUAN_LY', 'CAN_BO_CO_SO'];
 const CAN_DELETE_ROLES = ['IT_ADMIN', 'LANH_DAO'];
+const CAN_RESET_ENROLLMENT_ROLES = ['IT_ADMIN', 'LANH_DAO', 'CAN_BO_QUAN_LY'];
+const RESETTABLE_LIFECYCLES = new Set(['DANG_QUAN_LY', 'DANG_CHO_PHE_DUYET', 'TAI_HOA_NHAP']);
 const VIEWER_ROLE = 'VIEWER';
 
 const TAB_KEYS = ['info', 'scenario', 'timeline', 'documents', 'devices', 'enrollment'] as const;
@@ -776,7 +781,62 @@ function TabDevices({ subjectId }: { subjectId: string }) {
 }
 
 // --- Tab: Enrollment ---
-function TabEnrollment({ detail }: { detail: SubjectDetail }) {
+function TabEnrollment({
+  detail,
+  userRole,
+  onRefresh,
+}: {
+  detail: SubjectDetail;
+  userRole: string;
+  onRefresh: () => void;
+}) {
+  const { showToast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [resetDevice, setResetDevice] = useState(false);
+  const [reasonError, setReasonError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const canReset =
+    CAN_RESET_ENROLLMENT_ROLES.includes(userRole) &&
+    RESETTABLE_LIFECYCLES.has(detail.lifecycle);
+
+  const closeDialog = () => {
+    if (submitting) return;
+    setDialogOpen(false);
+    setReason('');
+    setResetDevice(false);
+    setReasonError('');
+  };
+
+  const handleSubmit = async () => {
+    const trimmed = reason.trim();
+    if (trimmed.length < 5) {
+      setReasonError('Lý do phải có ít nhất 5 ký tự.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await resetEnrollment(detail.id, {
+        reason: trimmed,
+        resetDevice,
+      });
+      const body = (res.data as any)?.data ?? res.data;
+      showToast(body?.message ?? 'Đã đặt lại đăng ký sinh trắc học.', 'success');
+      setDialogOpen(false);
+      setReason('');
+      setResetDevice(false);
+      onRefresh();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Không thể đặt lại đăng ký. Vui lòng thử lại.';
+      showToast(msg, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (detail.status === 'INIT') {
     return (
       <EmptyState
@@ -788,22 +848,118 @@ function TabEnrollment({ detail }: { detail: SubjectDetail }) {
   }
 
   return (
-    <Card title={MSG.cardEnrollment}>
-      <LabelValue label={MSG.lblStatus}>
-        <Badge variant={STATUS_BADGE[detail.status]?.variant ?? 'neutral'}>
-          {STATUS_BADGE[detail.status]?.label ?? detail.status}
-        </Badge>
-      </LabelValue>
-      {detail.enrollment_date && (
-        <LabelValue label={MSG.lblBindDate}>{formatDate(detail.enrollment_date)}</LabelValue>
+    <>
+      <Card title={MSG.cardEnrollment}>
+        <LabelValue label={MSG.lblStatus}>
+          <Badge variant={STATUS_BADGE[detail.status]?.variant ?? 'neutral'}>
+            {STATUS_BADGE[detail.status]?.label ?? detail.status}
+          </Badge>
+        </LabelValue>
+        <LabelValue label="Lifecycle">
+          <span className="font-mono text-[12px] text-zinc-700">{detail.lifecycle}</span>
+        </LabelValue>
+        {detail.enrollment_date && (
+          <LabelValue label={MSG.lblBindDate}>{formatDate(detail.enrollment_date)}</LabelValue>
+        )}
+        {detail.compliance_rate !== null && detail.compliance_rate !== undefined && (
+          <LabelValue label="Tỉ lệ tuân thủ">{`${detail.compliance_rate}%`}</LabelValue>
+        )}
+        {detail.notes && (
+          <LabelValue label={MSG.lblLegalNotes}>{detail.notes}</LabelValue>
+        )}
+
+        {canReset && (
+          <div className="mt-4 pt-3 border-t border-zinc-100">
+            <button
+              onClick={() => setDialogOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 text-amber-700 bg-amber-50 rounded text-[12px] font-medium hover:bg-amber-100 transition-colors"
+            >
+              <RotateCcw size={13} />
+              Đặt lại đăng ký sinh trắc học
+            </button>
+            <p className="text-[11px] text-zinc-400 mt-1.5">
+              Yêu cầu đối tượng đăng ký lại khuôn mặt / NFC (khi đổi CCCD, đổi ảnh, hoặc nghi ngờ dữ liệu cũ).
+            </p>
+          </div>
+        )}
+      </Card>
+
+      {/* Reset dialog */}
+      {dialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={closeDialog}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center">
+                <AlertTriangle size={18} className="text-amber-600" />
+              </div>
+              <h3 className="text-[15px] font-semibold text-zinc-900">
+                Đặt lại đăng ký sinh trắc học
+              </h3>
+            </div>
+            <p className="text-[13px] text-zinc-600 mb-3">
+              Toàn bộ dữ liệu khuôn mặt và NFC của{' '}
+              <strong className="text-zinc-900">{detail.full_name}</strong> sẽ bị vô hiệu. Đối tượng phải mở app mobile để đăng ký lại.
+            </p>
+
+            <label className="block text-[12px] font-medium text-zinc-700 mb-1">
+              Lý do <span className="text-red-600">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (reasonError) setReasonError('');
+              }}
+              placeholder="VD: đổi CCCD mới, ảnh khuôn mặt mờ, nghi ngờ mạo danh…"
+              rows={3}
+              disabled={submitting}
+              className="w-full px-3 py-2 border border-zinc-300 rounded text-[13px] focus:outline-none focus:ring-1 focus:ring-red-500 resize-none disabled:bg-zinc-50"
+            />
+            {reasonError && (
+              <p className="text-[11px] text-red-600 mt-1">{reasonError}</p>
+            )}
+
+            <label className="flex items-center gap-2 mt-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={resetDevice}
+                onChange={(e) => setResetDevice(e.target.checked)}
+                disabled={submitting}
+                className="h-3.5 w-3.5 accent-red-600"
+              />
+              <span className="text-[12px] text-zinc-700">
+                Đồng thời đặt lại thiết bị đã gắn (đối tượng phải đăng ký thiết bị mới)
+              </span>
+            </label>
+
+            <div className="flex gap-2 justify-end mt-5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={closeDialog}
+                disabled={submitting}
+              >
+                Hủy
+              </Button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="inline-flex items-center gap-1.5 px-3 h-8 rounded text-[13px] font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <RotateCcw size={13} />
+                {submitting ? 'Đang xử lý…' : 'Xác nhận đặt lại'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-      {detail.compliance_rate !== null && detail.compliance_rate !== undefined && (
-        <LabelValue label="Tỉ lệ tuân thủ">{`${detail.compliance_rate}%`}</LabelValue>
-      )}
-      {detail.notes && (
-        <LabelValue label={MSG.lblLegalNotes}>{detail.notes}</LabelValue>
-      )}
-    </Card>
+    </>
   );
 }
 
@@ -931,7 +1087,7 @@ function SubjectDetailPage() {
       case 'devices':
         return <TabDevices subjectId={id} />;
       case 'enrollment':
-        return <TabEnrollment detail={detail} />;
+        return <TabEnrollment detail={detail} userRole={userRole} onRefresh={loadDetail} />;
       default:
         return <TabInfo detail={detail} />;
     }

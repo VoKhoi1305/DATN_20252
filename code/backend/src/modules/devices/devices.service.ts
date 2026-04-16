@@ -88,4 +88,23 @@ export class DevicesService {
       order: { createdAt: 'DESC' },
     });
   }
+
+  /**
+   * Mark the subject's active device as REPLACED. The row is kept for history,
+   * but the subject must enroll a new device. Idempotent — returns false when
+   * no active device exists.
+   */
+  async resetActiveDevice(subjectId: string): Promise<boolean> {
+    const active = await this.getActiveDevice(subjectId);
+    if (!active) return false;
+
+    await this.deviceRepo.update(active.id, {
+      status: DeviceStatus.REPLACED,
+      replacedAt: new Date(),
+    });
+    this.logger.log(
+      `Reset active device ${active.deviceId} for subject ${subjectId}`,
+    );
+    return true;
+  }
 }

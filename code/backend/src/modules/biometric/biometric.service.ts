@@ -166,4 +166,34 @@ export class BiometricService {
   hashChipData(chipData: string): string {
     return crypto.createHash('sha256').update(chipData).digest('hex');
   }
+
+  /**
+   * Deactivate all face templates + NFC records for a subject.
+   * Used when an officer resets enrollment so the subject must re-enroll biometrics.
+   * Records are kept (history) but marked is_active = false.
+   */
+  async resetBiometricEnrollment(subjectId: string): Promise<{
+    facesDeactivated: number;
+    nfcDeactivated: number;
+  }> {
+    const [faceRes, nfcRes] = await Promise.all([
+      this.faceTemplateRepo.update(
+        { subjectId, isActive: true },
+        { isActive: false },
+      ),
+      this.nfcRecordRepo.update(
+        { subjectId, isActive: true },
+        { isActive: false },
+      ),
+    ]);
+
+    const facesDeactivated = faceRes.affected ?? 0;
+    const nfcDeactivated = nfcRes.affected ?? 0;
+
+    this.logger.log(
+      `Reset biometric enrollment for subject ${subjectId}: faces=${facesDeactivated}, nfc=${nfcDeactivated}`,
+    );
+
+    return { facesDeactivated, nfcDeactivated };
+  }
 }

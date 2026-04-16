@@ -563,6 +563,97 @@ export class EnrollmentService {
     };
   }
 
+  /**
+   * Officer action: reset a subject's biometric enrollment so they must redo it.
+   *
+   * Use cases:
+   *   - Subject changes face (aging, injury) and needs fresh templates
+   *   - CCCD card re-issued → new chip data must be re-enrolled
+   *   - Officer suspects prior enrollment was compromised
+   *
+   * Effect:
+   *   - Deactivate all face templates + NFC records (history preserved in biometric DB)
+   *   - Optionally mark the active device as REPLACED (resetDevice=true)
+   *   - Clear previous approval metadata
+   *   - Transition lifecycle → ENROLLMENT (subject re-enrolls via mobile app)
+   *   - Notify subject
+   *
+   * Lifecycle guards: only DANG_QUAN_LY, DANG_CHO_PHE_DUYET, or TAI_HOA_NHAP
+   * can be reset. KHOI_TAO / ENROLLMENT already require enrollment; KET_THUC
+   * is terminal.
+   */
+  async resetEnrollment(
+    subjectId: string,
+    officerUserId: string,
+    reason: string,
+    resetDevice: boolean,
+  ) {
+    const [subject, officer] = await Promise.all([
+      this.findSubjectById(subjectId),
+      this.findUserById(officerUserId),
+    ]);
+
+    const resetableStates = new Set<SubjectLifecycle>([
+      SubjectLifecycle.DANG_QUAN_LY,
+      SubjectLifecycle.DANG_CHO_PHE_DUYET,
+      SubjectLifecycle.TAI_HOA_NHAP,
+    ]);
+
+    if (!resetableStates.has(subject.lifecycle)) {
+      throw new BadRequestException({
+        code: ErrorCodes.ENROLLMENT_RESET_NOT_ALLOWED,
+        message:
+          subject.lifecycle === SubjectLifecycle.KHOI_TAO ||
+          subject.lifecycle === SubjectLifecycle.ENROLLMENT
+            ? 'Đối tượng chưa hoàn tất đăng ký, không cần đặt lại.'
+            : 'Không thể đặt lại đăng ký ở trạng thái hiện tại.',
+      });
+    }
+
+    await this.checkOfficerAreaScope(officer, subject.areaId);
+
+    const biometricReset = await this.biometricService.resetBiometricEnrollment(
+      subject.id,
+    );
+
+    let deviceReset = false;
+    if (resetDevice) {
+      deviceReset = await this.devicesService.resetActiveDevice(subject.id);
+    }
+
+    const now = new Date();
+    await this.subjectRepository.update(subject.id, {
+      lifecycle: SubjectLifecycle.ENROLLMENT,
+      submittedAt: null,
+      approvedById: null,
+      approvedAt: null,
+      approvalNote: null,
+      rejectionNote: `Đăng ký bị đặt lại bởi cán bộ. Lý do: ${reason}`,
+    });
+
+    this.logger.log(
+      `Enrollment RESET for subject ${subject.id} by officer ${officerUserId}. ` +
+        `Reason: "${reason}". Biometrics: faces=${biometricReset.facesDeactivated}, ` +
+        `nfc=${biometricReset.nfcDeactivated}, deviceReset=${deviceReset}`,
+    );
+
+    await this.notifySubject(
+      subject,
+      'ENROLLMENT_RESET',
+      'Yêu cầu đăng ký lại sinh trắc học',
+      `Cán bộ đã yêu cầu bạn đăng ký lại sinh trắc học. Lý do: ${reason}. Vui lòng mở ứng dụng để thực hiện.`,
+    );
+
+    return {
+      lifecycle: SubjectLifecycle.ENROLLMENT,
+      resetAt: now,
+      facesDeactivated: biometricReset.facesDeactivated,
+      nfcDeactivated: biometricReset.nfcDeactivated,
+      deviceReset,
+      message: `Đã đặt lại đăng ký sinh trắc học cho ${subject.fullName}. Đối tượng cần thực hiện đăng ký lại.`,
+    };
+  }
+
   // ── Private helpers ────────────────────────────────────────
 
   /**

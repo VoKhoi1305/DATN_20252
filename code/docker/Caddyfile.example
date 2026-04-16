@@ -1,0 +1,19 @@
+# ============================================================
+# Caddyfile — optional reverse-proxy in front of the web container
+# Gives you automatic HTTPS via Let's Encrypt. Use this if you have
+# a domain pointed at the server.
+#
+# Replace `smtts.example.com` with your real domain, then:
+#   docker run -d --name caddy --network smtts-prod_smtts-net \
+#     -p 80:80 -p 443:443 \
+#     -v $PWD/Caddyfile:/etc/caddy/Caddyfile \
+#     -v caddy_data:/data \
+#     caddy:2
+# Also: change WEB_PUBLIC_PORT in .env.prod to 8080 (or any free port)
+# so it does NOT clash with Caddy on 80/443.
+# ============================================================
+
+smtts.example.com {
+    encode gzip zstd
+    reverse_proxy web:80
+}
